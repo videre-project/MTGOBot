@@ -41,19 +41,23 @@ public static class EventQueue
       return false;
     }
 
-    // Check that the event is not already added to the queue.
-    if (Queue.Contains((int)@event.Id))
+    // Check that the event is not already added to the queue or database.
+    if (Queue.Contains((int)@event.Id) ||
+        await EventRepository.EventExists(@event.Id))
     {
       return false;
     }
 
-    if (@event.IsCompleted && !(await EventRepository.EventExists(@event.Id)))
+    Console.WriteLine($"Found event '{@event}'.");
+
+    if (@event.IsCompleted)
     {
       Console.WriteLine($"Event '{@event}' is already completed, adding to queue...");
       Queue.Enqueue(@event.Id);
     }
     else
     {
+      Console.WriteLine($"--> Event '{@event}' is scheduled to start at '{@event.StartTime}'.");
       @event.TournamentStateChanged += new EventCallback<
         TournamentStateChangedEventArgs
       >((e) =>
