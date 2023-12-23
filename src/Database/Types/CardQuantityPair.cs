@@ -1,0 +1,35 @@
+/** @file
+  Copyright (c) 2023, Cory Bennett. All rights reserved.
+  SPDX-License-Identifier: Apache-2.0
+**/
+#pragma warning disable CS8602, CS8604
+
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+using MTGOSDK.API.Collection;
+
+using static Database.TypeMapperExtensions;
+
+
+namespace Database.Types;
+
+public struct CardQuantityPair
+{
+  public int    Id       { get; set; }
+  public string Name     { get; set; }
+  public int    Quantity { get; set; }
+
+  public CardQuantityPair(JToken json)
+  {
+    this.Id       = json["docid"].ToObject<int>();
+    this.Name     = CollectionManager.GetCard(this.Id).Name;
+    this.Quantity = json["qty"].ToObject<int>();
+  }
+
+  public override string ToString() =>
+    string.Format(
+      "({0}, '{1}', {2})",
+      Id, Name.Escape(), Quantity
+    );
+}
