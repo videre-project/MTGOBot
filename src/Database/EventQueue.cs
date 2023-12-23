@@ -34,7 +34,7 @@ public static class EventQueue
   {
     // Check whether the event is a tournament type defined in the schema.
     if (@event is not Tournament ||
-        @event.StartTime > DateTime.Now.AddDays(3) ||
+        @event.StartTime > DateTime.Now.AddDays(1) ||
         @event.ToString().Contains("Queue") ||
         @event.ToString().Contains("Draft"))
     {

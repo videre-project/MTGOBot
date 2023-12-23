@@ -12,11 +12,10 @@ using Bot;
 
 
 DotEnv.LoadFile();
-
 Console.WriteLine($"Connecting to MTGO v{Client.Version}...");
-using var client = new BotClient();
-Console.WriteLine($"Finished loading.");
-await client.StartEventQueue();
-
-Console.WriteLine("Press any key to exit...");
-Console.ReadKey();
+using (var client = new BotClient())
+{
+  Console.WriteLine("Finished loading.");
+  await client.StartEventQueue();
+  Console.WriteLine("Closing MTGO client...");
+}

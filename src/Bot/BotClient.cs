@@ -17,7 +17,20 @@ namespace Bot;
 
 public class BotClient : IDisposable
 {
+  /// <summary>
+  /// The next reset time to restart the MTGO client and event queue.
+  /// </summary>
+  private static DateTime ResetTime = GetResetTime();
+
   public Client Client { get; private set; }
+
+  private static DateTime GetResetTime()
+  {
+    var resetTime = DateTime.UtcNow.Date.AddHours(7).AddMinutes(30);
+    return DateTime.UtcNow < resetTime
+      ? resetTime
+      : resetTime.AddDays(1);
+  }
 
   public BotClient()
   {
@@ -27,6 +40,7 @@ public class BotClient : IDisposable
         : new ClientOptions
           {
             CreateProcess = true,
+            DestroyOnExit = true,
             AcceptEULAPrompt = true
           }
     );
@@ -45,7 +59,7 @@ public class BotClient : IDisposable
     await EventQueue.InitializeQueue();
 
     // Start for loop that waits every 5 minutes before starting the next batch.
-    while (true)
+    while (DateTime.UtcNow < ResetTime)
     {
       await EventQueue.ProcessQueue();
       await Task.Delay(TimeSpan.FromMinutes(5));
