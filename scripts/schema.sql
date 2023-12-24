@@ -20,7 +20,8 @@ CREATE TYPE EventType as ENUM (
   'League',
   'Preliminary',
   'Challenge',
-  'Showcase'
+  'Showcase',
+  'Qualifier',
 );
 
 CREATE TABLE Events (

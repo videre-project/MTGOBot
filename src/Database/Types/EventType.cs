@@ -13,5 +13,6 @@ public enum EventType
   League,
   Preliminary,
   Challenge,
-  Showcase
+  Showcase,
+  Qualifier
 }
