@@ -56,12 +56,11 @@ public class BotClient : IDisposable
 
   public async Task StartEventQueue()
   {
-    await EventQueue.InitializeQueue();
-
+    var queue = new EventQueue();
     // Start for loop that waits every 5 minutes before starting the next batch.
     while (DateTime.UtcNow < ResetTime)
     {
-      await EventQueue.ProcessQueue();
+      await queue.ProcessQueue();
       await Task.Delay(TimeSpan.FromMinutes(5));
     }
   }

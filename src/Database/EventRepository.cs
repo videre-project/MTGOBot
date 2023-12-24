@@ -75,7 +75,6 @@ public class EventRepository
   /// Adds entries from an EventComposite view to the database.
   /// </summary>
   /// <param name="entry">The EventComposite instance to pull records from.</param>
-  /// <returns>The status of the transaction.</returns>
   /// <remarks>
   /// This method is wrapped in a transaction scope to ensure that all records
   /// are added atomically. If any of the records fail to be added, the entire

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 using MTGOSDK.API.Play;
 using MTGOSDK.API.Play.Tournaments;
+using MTGOSDK.Core.Reflection;
 using static MTGOSDK.API.Events;
 
 using WotC.MtGO.Client.Model.Play.Tournaments;
@@ -18,19 +19,21 @@ using WotC.MtGO.Client.Model.Play.Tournaments;
 
 namespace Database;
 
-public static class EventQueue
+public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
 {
   /// <summary>
   /// The current queue of events to be added to the database.
   /// </summary>
-  public static ConcurrentQueue<int> Queue = new();
+  public ConcurrentQueue<int> Queue = new();
+
+  public EventQueue() => InitializeQueue().Wait();
 
   /// <summary>
   /// Adds an event to the queue if or once the tournament has finished.
   /// </summary>
   /// <param name="event">The event to add to the queue.</param>
   /// <returns>True if the event was added to the queue, false otherwise.</returns>
-  public static async Task<bool> AddEventToQueue(dynamic @event)
+  public async Task<bool> AddEventToQueue(dynamic @event)
   {
     // Check whether the event is a tournament type defined in the schema.
     if (@event is not Tournament ||
@@ -48,8 +51,6 @@ public static class EventQueue
       return false;
     }
 
-    Console.WriteLine($"Found event '{@event}'.");
-
     if (@event.IsCompleted)
     {
       Console.WriteLine($"Event '{@event}' is already completed, adding to queue...");
@@ -57,7 +58,6 @@ public static class EventQueue
     }
     else
     {
-      Console.WriteLine($"--> Event '{@event}' is scheduled to start at '{@event.StartTime}'.");
       @event.TournamentStateChanged += new EventCallback<
         TournamentStateChangedEventArgs
       >((e) =>
@@ -78,7 +78,7 @@ public static class EventQueue
   /// </summary>
   /// <param name="events">The events to add to the queue.</param>
   /// <returns>True if all of the events were added to the queue, false otherwise.</returns>
-  public static async Task<bool> AddEventsToQueue(IEnumerable<dynamic> events)
+  public async Task<bool> AddEventsToQueue(IEnumerable<dynamic> events)
   {
     bool added = false;
     foreach (var @event in events)
@@ -92,7 +92,7 @@ public static class EventQueue
   /// <summary>
   /// Initializes the event queue and adds callbacks to add events to the queue.
   /// </summary>
-  public static async Task InitializeQueue()
+  public async Task InitializeQueue()
   {
     // Add a callback to add the event to the queue when new events are created.
     EventManager.PlayerEventsCreated += new EventCallback<
@@ -106,15 +106,15 @@ public static class EventQueue
   /// <summary>
   /// Blocks the current thread and processes the event queue when updated.
   /// </summary>
-  public static async Task ProcessQueue()
+  public async Task ProcessQueue()
   {
-    while (Queue.TryDequeue(out int eventId))
+    while (Queue.TryDequeue(out int id))
     {
-      var tournament = EventManager.GetEvent(eventId) as Tournament;
-      Console.WriteLine($"Processing event '{tournament}' ...");
-      Console.WriteLine($"--> Building composite for '{tournament}' ...");
-      var composite = new EventComposite(tournament);
-      Console.WriteLine($"--> Adding event '{tournament}' to database ...");
+      var tournament = await TryUntil(() => EventManager.GetEvent(id)) as Tournament;
+      Console.WriteLine($"Processing event {tournament} ...");
+      var composite = await TryUntil(() => new EventComposite(tournament));
+      Console.WriteLine($"--> Got event entry for {tournament}.");
+
       await EventRepository.AddEvent(composite);
       Console.WriteLine($"--> Added event '{tournament}' to the database.");
     }

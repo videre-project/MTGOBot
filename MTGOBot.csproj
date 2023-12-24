@@ -28,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\MTGOSDK.Ref\MTGOSDK.Ref.csproj"
                       ReferenceOutputAssembly="false" />
+    <Reference Include="$(MTGOSDK_Refs)\MTGOEnumStruct.dll" />
     <Reference Include="$(MTGOSDK_Refs)\WotC.MtGO.Client.Model.Reference.dll" />
   </ItemGroup>
 
