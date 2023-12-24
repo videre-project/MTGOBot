@@ -25,7 +25,9 @@ public struct GameResult
   private static ResultType GetResult(GameStandingRecord game, User player) =>
     game.WinnerIds.Contains(player.Id)
       ? ResultType.win
-      : ResultType.loss;
+      : game.WinnerIds.Count() > 0
+        ? ResultType.loss
+        : ResultType.draw;
 
   public override string ToString() =>
     string.Format(

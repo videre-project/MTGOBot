@@ -55,7 +55,9 @@ public struct MatchEntry
       ? ResultType.win
       : match.WinningPlayerIds.Contains(player.Id)
         ? ResultType.win
-        : ResultType.loss;
+        : match.LosingPlayerIds.Contains(player.Id)
+          ? ResultType.loss
+          : ResultType.draw;
 
   /// <summary>
   /// Extracts GameStandingRecord entries from a MatchStandingRecord.
