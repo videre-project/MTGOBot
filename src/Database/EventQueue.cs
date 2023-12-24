@@ -22,9 +22,23 @@ namespace Database;
 public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
 {
   /// <summary>
+  /// Represents a queued event to be added to the database.
+  /// </summary>
+  public struct QueueItem(int id, int retries = 3)
+  {
+    public int Id => id;
+    public int Retries = retries;
+  }
+
+  /// <summary>
   /// The current queue of events to be added to the database.
   /// </summary>
-  public ConcurrentQueue<int> Queue = new();
+  public ConcurrentQueue<QueueItem> Queue = new();
+
+  /// <summary>
+  /// The number of events in the queue.
+  /// </summary>
+  public int Count => Queue.Count;
 
   public EventQueue() => InitializeQueue().Wait();
 
@@ -45,7 +59,7 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
     }
 
     // Check that the event is not already added to the queue or database.
-    if (Queue.Contains((int)@event.Id) ||
+    if (Queue.Contains(new QueueItem(@event.Id)) ||
         await EventRepository.EventExists(@event.Id))
     {
       return false;
@@ -54,7 +68,7 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
     if (@event.IsCompleted)
     {
       Console.WriteLine($"Event '{@event}' is already completed, adding to queue...");
-      Queue.Enqueue(@event.Id);
+      Queue.Enqueue(new QueueItem(@event.Id));
     }
     else
     {
@@ -65,7 +79,7 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
         if (e.NewValue == TournamentState.Finished)
         {
           Console.WriteLine($"Event '{@event}' is now finished, adding to queue...");
-          Queue.Enqueue(@event.Id);
+          Queue.Enqueue(new QueueItem(@event.Id));
         }
       });
     }
@@ -108,15 +122,30 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
   /// </summary>
   public async Task ProcessQueue()
   {
-    while (Queue.TryDequeue(out int id))
+    while (Queue.TryDequeue(out QueueItem item))
     {
-      var tournament = await TryUntil(() => EventManager.GetEvent(id)) as Tournament;
-      Console.WriteLine($"Processing event {tournament} ...");
-      var composite = await TryUntil(() => new EventComposite(tournament));
-      Console.WriteLine($"--> Got event entry for {tournament}.");
-
-      await EventRepository.AddEvent(composite);
-      Console.WriteLine($"--> Added event '{tournament}' to the database.");
+      // Wait until the event is available in the EventManager.
+      var tournament = await TryUntil(() => EventManager.GetEvent(item.Id));
+      Console.WriteLine($"Processing event '{tournament}' ...");
+      try
+      {
+        // Build the composite event entry to add to the database.
+        var composite = new EventComposite(tournament as Tournament);
+        Console.WriteLine($"--> Got event entry for {tournament}.");
+        // Add the event to the database.
+        await EventRepository.AddEvent(composite);
+        Console.WriteLine($"--> Added event '{tournament}' to the database.");
+      }
+      catch (Exception e)
+      {
+        Console.WriteLine($"Failed to process event '{tournament}': {e}");
+        if (item.Retries-- <= 0)
+        {
+          Console.WriteLine($"Event '{tournament}' has exceeded the maximum number of retries, skipping...");
+          continue;
+        }
+        Queue.Enqueue(item);
+      }
     }
   }
 }
