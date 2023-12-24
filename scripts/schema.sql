@@ -63,7 +63,7 @@ CREATE TYPE ResultType AS ENUM ('win', 'loss', 'draw');
 CREATE TYPE GameResult AS (id INT, result ResultType);
 
 CREATE TABLE Matches (
-  id        INT,
+  id        INT NULL,
   event_id  INT
     REFERENCES Events (id)
       ON UPDATE CASCADE
@@ -82,8 +82,7 @@ CREATE TABLE Matches (
   isBye     BOOLEAN DEFAULT FALSE,
   games     GameResult[] DEFAULT ARRAY[]::GameResult[],
 
-  PRIMARY KEY (id, player),
-  UNIQUE (id, player)
+  PRIMARY KEY (event_id, round, player)
 );
 
 CREATE TYPE CardQuantityPair AS (id INT, name TEXT, quantity INT);

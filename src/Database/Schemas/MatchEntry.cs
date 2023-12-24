@@ -17,7 +17,7 @@ namespace Database.Schemas;
 
 public struct MatchEntry
 {
-  public int           Id       { get; set; }
+  public int?          Id       { get; set; }
   public int           EventId  { get; set; }
   public int           Round    { get; set; }
   public string        Player   { get; set; }
@@ -51,9 +51,11 @@ public struct MatchEntry
   /// Retrieves the result of the match for the given player.
   /// </summary>
   private static ResultType GetResult(MatchStandingRecord match, User player) =>
-    match.WinningPlayerIds.Contains(player.Id)
+    match.HasBye
       ? ResultType.win
-      : ResultType.loss;
+      : match.WinningPlayerIds.Contains(player.Id)
+        ? ResultType.win
+        : ResultType.loss;
 
   /// <summary>
   /// Extracts GameStandingRecord entries from a MatchStandingRecord.
