@@ -4,6 +4,7 @@
 **/
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 using MTGOSDK.API;
@@ -24,12 +25,18 @@ public class BotClient : IDisposable
 
   public Client Client { get; private set; }
 
-  private static DateTime GetResetTime()
+  private static DateTime GetResetTime(int numResets = 12)
   {
-    var resetTime = DateTime.UtcNow.Date.AddHours(7).AddMinutes(30);
-    return DateTime.UtcNow < resetTime
-      ? resetTime
-      : resetTime.AddDays(1);
+    var resetTime = DateTime.UtcNow.Date.AddHours(1).AddMinutes(30);
+
+    TimeSpan interval = (resetTime.AddDays(1) - resetTime) / numResets;
+    DateTime[] times = new DateTime[numResets + 1];
+    for (int i = 0; i <= numResets; i++)
+    {
+      times[i] = resetTime + (interval * i);
+    }
+
+    return times.FirstOrDefault(t => t > DateTime.UtcNow);
   }
 
   public BotClient()
@@ -57,11 +64,13 @@ public class BotClient : IDisposable
   public async Task StartEventQueue()
   {
     var queue = new EventQueue();
-    // Start for loop that waits every 5 minutes before starting the next batch.
+    // Start loop that waits every 15 minutes before starting the next batch.
     while (DateTime.UtcNow < ResetTime)
     {
       await queue.ProcessQueue();
-      await Task.Delay(TimeSpan.FromMinutes(5));
+      await Task.Delay(TimeSpan.FromMinutes(15));
+      // Clear any small object caches to prevent memory leaks on the client.
+      Client.ClearCaches();
     }
   }
 
