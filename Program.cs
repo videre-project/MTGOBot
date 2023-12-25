@@ -13,9 +13,8 @@ using Bot;
 
 DotEnv.LoadFile();
 Console.WriteLine($"Connecting to MTGO v{Client.Version}...");
-using (var client = new BotClient())
+using (var client = new BotClient(restart: true))
 {
   Console.WriteLine("Finished loading.");
   await client.StartEventQueue();
-  Console.WriteLine("Closing MTGO client...");
 }

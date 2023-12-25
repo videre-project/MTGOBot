@@ -4,26 +4,27 @@
 **/
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
 using MTGOSDK.API;
 using MTGOSDK.Core;
+using MTGOSDK.Core.Reflection;
 using MTGOSDK.Core.Security;
 
+using Bot.API;
 using Database;
 
 
 namespace Bot;
 
-public class BotClient : IDisposable
+public class BotClient : DLRWrapper<Client>, IDisposable
 {
   /// <summary>
   /// The next reset time to restart the MTGO client and event queue.
   /// </summary>
   private static DateTime ResetTime = GetResetTime();
-
-  public Client Client { get; private set; }
 
   private static DateTime GetResetTime(int numResets = 12)
   {
@@ -39,10 +40,37 @@ public class BotClient : IDisposable
     return times.FirstOrDefault(t => t > DateTime.UtcNow);
   }
 
-  public BotClient()
+  /// <summary>
+  /// The instance of the MTGO client handle.
+  /// </summary>
+  public Client Client { get; private set; }
+
+  public BotClient(bool restart = false) : base(
+    factory: async delegate
+    {
+      if (restart)
+      {
+        // Restart the bot on application exit.
+        AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+        {
+          Console.WriteLine("Starting a new MTGO Bot instance...");
+          Process.Start(Process.GetCurrentProcess().MainModule.FileName);
+
+          Console.WriteLine("Shutting down MTGO Bot...");
+          Environment.Exit(0);
+        };
+      }
+
+      // Wait until the main MTGO server is online.
+      while (!await ServerStatus.IsOnline())
+      {
+        restart |= true; // Restart after downtime.
+        await Task.Delay(TimeSpan.FromMinutes(30));
+      }
+    })
   {
     this.Client = new Client(
-      RemoteClient.HasStarted
+      !restart && RemoteClient.HasStarted
         ? new ClientOptions()
         : new ClientOptions
           {
@@ -61,6 +89,9 @@ public class BotClient : IDisposable
     }
   }
 
+  /// <summary>
+  /// Blocks the current thread processing the event queue.
+  /// </summary>
   public async Task StartEventQueue()
   {
     var queue = new EventQueue();
