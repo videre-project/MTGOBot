@@ -48,18 +48,9 @@ public class BotClient : DLRWrapper<Client>, IDisposable
   public BotClient(bool restart = false) : base(
     factory: async delegate
     {
+      // Restart the bot on application exit.
       if (restart)
-      {
-        // Restart the bot on application exit.
-        AppDomain.CurrentDomain.ProcessExit += (s, e) =>
-        {
-          Console.WriteLine("Starting a new MTGO Bot instance...");
-          Process.Start(Process.GetCurrentProcess().MainModule.FileName);
-
-          Console.WriteLine("Shutting down MTGO Bot...");
-          Environment.Exit(0);
-        };
-      }
+        AppDomain.CurrentDomain.ProcessExit += (s, e) => Restart();
 
       // Wait until the main MTGO server is online.
       while (!await ServerStatus.IsOnline())
@@ -69,6 +60,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       }
     })
   {
+    // Initialize the client instance.
     this.Client = new Client(
       !restart && RemoteClient.HasStarted
         ? new ClientOptions()
@@ -80,6 +72,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
           }
     );
 
+    // If not connected, attempt to log in.
     if (!Client.IsConnected)
     {
       Client.LogOn(
@@ -103,6 +96,18 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       // Clear any small object caches to prevent memory leaks on the client.
       Client.ClearCaches();
     }
+  }
+
+  /// <summary>
+  /// Starts a new instance of the MTGO Bot and shuts down the current instance.
+  /// </summary>
+  private static void Restart()
+  {
+    Console.WriteLine("Starting a new MTGO Bot instance...");
+    Process.Start(Process.GetCurrentProcess().MainModule.FileName);
+
+    Console.WriteLine("Shutting down MTGO Bot...");
+    Environment.Exit(0);
   }
 
   public void Dispose() => Client.Dispose();
