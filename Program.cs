@@ -5,14 +5,9 @@
 
 using System;
 
-using MTGOSDK.API;
-using MTGOSDK.Core.Security;
-
 using Bot;
 
 
-DotEnv.LoadFile();
-Console.WriteLine($"Connecting to MTGO v{Client.Version}...");
 using (var client = new BotClient(restart: true))
 {
   Console.WriteLine("Finished loading.");

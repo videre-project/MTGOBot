@@ -61,6 +61,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
     })
   {
     // Initialize the client instance.
+    Console.WriteLine($"Connecting to MTGO v{Client.Version}...");
     this.Client = new Client(
       !restart && RemoteClient.HasStarted
         ? new ClientOptions()
@@ -73,6 +74,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
     );
 
     // If not connected, attempt to log in.
+    DotEnv.LoadFile();
     if (!Client.IsConnected)
     {
       Client.LogOn(
