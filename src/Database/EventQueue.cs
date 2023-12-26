@@ -16,6 +16,8 @@ using static MTGOSDK.API.Events;
 
 using WotC.MtGO.Client.Model.Play.Tournaments;
 
+using Database.Schemas;
+
 
 namespace Database;
 
@@ -56,6 +58,14 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
         @event.StartTime > DateTime.Now.AddDays(1) ||
         @event.ToString().Contains("Queue") ||
         @event.ToString().Contains("Draft"))
+    {
+      return false;
+    }
+
+    // Verify that the event satisfies event schema requirements.
+    if (!Try<bool>(() =>
+          EventEntry.GetFormatType(@event) != null ||
+          EventEntry.GetEventType(@event) != null))
     {
       return false;
     }
