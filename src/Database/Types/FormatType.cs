@@ -15,6 +15,5 @@ public enum FormatType
   Pioneer,
   Vintage,
   Legacy,
-  Pauper,
-  Limited
+  Pauper
 }

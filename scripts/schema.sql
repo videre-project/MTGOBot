@@ -12,8 +12,7 @@ CREATE TYPE FormatType AS ENUM (
   'Pioneer',
   'Vintage',
   'Legacy',
-  'Pauper',
-  'Limited'
+  'Pauper'
 );
 
 CREATE TYPE EventType as ENUM (

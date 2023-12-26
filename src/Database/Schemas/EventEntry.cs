@@ -38,7 +38,7 @@ public struct EventEntry
   /// <summary>
   /// Retrieves the FormatType from the provided tournament's description.
   /// </summary>
-  private static FormatType GetFormatType(Tournament tournament)
+  public static FormatType GetFormatType(Tournament tournament)
   {
     foreach (var format in Enum.GetValues(typeof(FormatType)))
     {
@@ -53,7 +53,7 @@ public struct EventEntry
   /// <summary>
   /// Retrieves the EventType from the provided tournament's description.
   /// </summary>
-  private static EventType GetEventType(Tournament tournament)
+  public static EventType GetEventType(Tournament tournament)
   {
     foreach (var kind in Enum.GetValues(typeof(EventType)))
     {
