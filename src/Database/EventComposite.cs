@@ -23,6 +23,8 @@ public struct EventComposite(Tournament tournament)
   public ICollection<MatchEntry>    matches   => standings.SelectMany(s => s.Matches).ToList();
   public ICollection<DeckEntry>     decklists = DeckEntry.FromEvent(tournament).Result;
 
+  public string DisplayName => tournament.ToString();
+
   public EventComposite(int eventId)
       : this(EventManager.GetEvent(eventId) as Tournament
         ?? throw new ArgumentException($"Event {eventId} is not a tournament."))

@@ -29,6 +29,7 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
     public int Id => @event.Id;
     public string Name => @event.ToString();
     public int Retries = retries;
+    public EventComposite? entry = null;
   }
 
   /// <summary>
@@ -131,8 +132,9 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
         // Wait until the event is available in the EventManager.
         var tournament = await TryUntil(() => EventManager.GetEvent(item.Id));
         // Build the composite event entry to add to the database.
-        var composite = new EventComposite(tournament as Tournament);
+        var composite = item.entry ?? new EventComposite(tournament as Tournament);
         Console.WriteLine($"--> Got event entry for {tournament}.");
+        item.entry ??= composite;
         // Add the event to the database.
         await EventRepository.AddEvent(composite);
         Console.WriteLine($"--> Added event '{tournament}' to the database.");

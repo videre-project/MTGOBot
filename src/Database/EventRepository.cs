@@ -26,7 +26,13 @@ public class EventRepository
 
   private static NpgsqlDataSource GetDataSource()
   {
-    NpgsqlDataSourceBuilder dbDataSource = new(DotEnv.Get("CONNECTION_STRING"));
+    NpgsqlDataSourceBuilder dbDataSource = new(
+      DotEnv.Get("CONNECTION_STRING") + string.Join(";", new string[] {
+        "Keepalive=15",
+        "IncludeErrorDetail=true",
+        "CommandTimeout=0",
+      })
+    );
 
     dbDataSource.MapEnum<FormatType>();
     dbDataSource.MapEnum<EventType>();
@@ -86,7 +92,10 @@ public class EventRepository
   /// </remarks>
   public static async Task AddEvent(EventComposite entry)
   {
+    Console.WriteLine($"Adding event {entry.DisplayName}:\n{entry}");
     using (var transactionScope = new TransactionScope(
+      TransactionScopeOption.Required,
+      TimeSpan.FromMinutes(10),
       TransactionScopeAsyncFlowOption.Enabled
     ))
     {
@@ -177,21 +186,10 @@ public class EventRepository
     {
       foreach(var deck in decks)
       {
-        try
-        {
         await connection.ExecuteAsync($@"
           INSERT INTO Decks
           VALUES {deck}
         ");
-        }
-        catch
-        {
-          Console.WriteLine($@"
-            INSERT INTO Decks
-            VALUES {deck}
-          ");
-          throw;
-        }
       }
     }
   }

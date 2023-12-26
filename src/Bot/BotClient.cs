@@ -85,11 +85,11 @@ public class BotClient : DLRWrapper<Client>, IDisposable
   public async Task StartEventQueue()
   {
     var queue = new EventQueue();
-    // Start loop that waits every 15 minutes before starting the next batch.
+    // Start loop that waits every 5 minutes before starting the next batch.
     while (DateTime.UtcNow < ResetTime)
     {
       await queue.ProcessQueue();
-      await Task.Delay(TimeSpan.FromMinutes(15));
+      await Task.Delay(TimeSpan.FromMinutes(5));
       // Clear any small object caches to prevent memory leaks on the client.
       Client.ClearCaches();
     }
