@@ -12,7 +12,6 @@ using MTGOSDK.Core;
 using MTGOSDK.Core.Reflection;
 using MTGOSDK.Core.Security;
 
-using Bot.API;
 using Database;
 
 
