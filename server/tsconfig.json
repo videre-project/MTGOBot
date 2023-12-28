@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    // "exactOptionalPropertyTypes": true,
+    "isolatedModules": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "noUncheckedIndexedAccess": true,
+    "outDir": "dist",
+    // "strict": true,
+    "target": "esnext",
+    "useUnknownInCatchVariables": true
+  },
+  "include": [
+    "./src/**/*"
+  ]
+}
