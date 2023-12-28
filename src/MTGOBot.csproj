@@ -18,15 +18,15 @@
                       Version="13.0.3" />
     <PackageReference Include="Npgsql"
                       Version="8.0.1" />
-    <ProjectReference Include="..\..\MTGOSDK\MTGOSDK.csproj" />
+    <ProjectReference Include="..\..\..\MTGOSDK\MTGOSDK.csproj" />
   </ItemGroup>
 
-  <Import Project="..\..\MTGOSDK.MSBuild\build\MTGOSDK.MSBuild.props" />
+  <Import Project="..\..\..\MTGOSDK.MSBuild\build\MTGOSDK.MSBuild.props" />
   <PropertyGroup>
     <MTGOSDK_Refs>$(_MTGOSDK_Refs)\3.4.*.*</MTGOSDK_Refs>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\MTGOSDK.Ref\MTGOSDK.Ref.csproj"
+    <ProjectReference Include="..\..\..\MTGOSDK.Ref\MTGOSDK.Ref.csproj"
                       ReferenceOutputAssembly="false" />
     <Reference Include="$(MTGOSDK_Refs)\MTGOEnumStruct.dll" />
     <Reference Include="$(MTGOSDK_Refs)\WotC.MtGO.Client.Model.Reference.dll" />
