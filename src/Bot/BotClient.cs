@@ -12,8 +12,6 @@ using MTGOSDK.Core;
 using MTGOSDK.Core.Reflection;
 using MTGOSDK.Core.Security;
 
-using Database;
-
 
 namespace Bot;
 
@@ -22,7 +20,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
   /// <summary>
   /// The next reset time to restart the MTGO client and event queue.
   /// </summary>
-  private static DateTime ResetTime = GetResetTime();
+  public static DateTime ResetTime = GetResetTime();
 
   private static DateTime GetResetTime(int numResets = 12)
   {

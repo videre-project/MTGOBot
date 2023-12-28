@@ -16,10 +16,11 @@ using static MTGOSDK.API.Events;
 
 using WotC.MtGO.Client.Model.Play.Tournaments;
 
+using Database;
 using Database.Schemas;
 
 
-namespace Database;
+namespace Bot;
 
 public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
 {
@@ -54,28 +55,21 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
   public async Task<bool> AddEventToQueue(dynamic @event)
   {
     // Check whether the event is a tournament type defined in the schema.
-    if (@event is not Tournament ||
-        @event.StartTime > DateTime.Now.AddDays(1) ||
-        @event.ToString().Contains("Queue") ||
-        @event.ToString().Contains("Draft"))
-    {
-      return false;
-    }
-
-    // Verify that the event satisfies event schema requirements.
-    if (!Try<bool>(() =>
-          EventEntry.GetFormatType(@event) != null ||
-          EventEntry.GetEventType(@event) != null))
+    if (!Try<bool>(() => new EventEntry(@event as Tournament).Id != -1))
     {
       return false;
     }
 
     // Check that the event is not already added to the queue or database.
-    if (Queue.Contains(new QueueItem(@event)) ||
+    if (@event.StartTime.AddMinutes(5) >= BotClient.ResetTime ||
+        Queue.Contains(new QueueItem(@event)) ||
         await EventRepository.EventExists(@event.Id))
     {
       return false;
     }
+
+    Console.WriteLine($"Found event '{@event}'...");
+    Console.WriteLine($"--> Start Time: {@event.StartTime}");
 
     if (@event.IsCompleted)
     {
