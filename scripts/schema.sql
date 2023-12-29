@@ -100,3 +100,14 @@ CREATE TABLE Decks (
   mainboard CardQuantityPair[] DEFAULT ARRAY[]::CardQuantityPair[],
   sideboard CardQuantityPair[] DEFAULT ARRAY[]::CardQuantityPair[]
 );
+
+CREATE TABLE Archetypes (
+  id        INT PRIMARY KEY,
+  deck_id   INT UNIQUE
+    REFERENCES Decks (id)
+      ON UPDATE CASCADE
+      ON DELETE CASCADE,
+  name      TEXT NOT NULL,
+  archetype TEXT NULL,
+  archetype_id INT NULL
+)

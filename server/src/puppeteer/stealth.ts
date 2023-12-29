@@ -18,6 +18,8 @@ export async function UseOptimizedDefaults({
 }) {
   puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
   puppeteer.use(StealthPlugin());
+  // const browser = await puppeteer.launch({ headless: "new", args });
+
   const browser = await puppeteer.launch({ headless: "new", args });
 
   const page = await browser.pages().then((pages) => pages[0]);

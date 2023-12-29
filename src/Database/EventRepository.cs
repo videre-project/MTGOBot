@@ -27,7 +27,11 @@ public class EventRepository
   private static NpgsqlDataSource GetDataSource()
   {
     NpgsqlDataSourceBuilder dbDataSource = new(
-      DotEnv.Get("CONNECTION_STRING") + string.Join(";", new string[] {
+      string.Join(";", new string[] {
+        $"Host={DotEnv.Get("PGHOST")}",
+        $"Database={DotEnv.Get("PGDATABASE")}",
+        $"Username={DotEnv.Get("PGUSER")}",
+        $"Password={DotEnv.Get("PGPASSWORD")}",
         "Keepalive=15",
         "IncludeErrorDetail=true",
         "CommandTimeout=0",
