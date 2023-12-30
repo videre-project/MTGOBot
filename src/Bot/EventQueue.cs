@@ -126,8 +126,9 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
   /// <summary>
   /// Blocks the current thread and processes the event queue when updated.
   /// </summary>
-  public async Task ProcessQueue()
+  public async Task<bool> ProcessQueue()
   {
+    bool hasUpdated = false;
     while (Queue.TryDequeue(out QueueItem item))
     {
       Console.WriteLine($"Processing event '{item.Name}' ...");
@@ -142,6 +143,7 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
         // Add the event to the database.
         await EventRepository.AddEvent(composite);
         Console.WriteLine($"--> Added event '{tournament}' to the database.");
+        hasUpdated |= true;
       }
       catch (Exception e)
       {
@@ -154,5 +156,7 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
         Queue.Enqueue(item);
       }
     }
+
+    return hasUpdated;
   }
 }

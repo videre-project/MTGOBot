@@ -5,6 +5,7 @@
 
 using System;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 using MTGOSDK.API;
@@ -85,10 +86,41 @@ public class BotClient : DLRWrapper<Client>, IDisposable
     // Start loop that waits every 5 minutes before starting the next batch.
     while (DateTime.UtcNow < ResetTime)
     {
-      await queue.ProcessQueue();
-      await Task.Delay(TimeSpan.FromMinutes(5));
+      if (await queue.ProcessQueue())
+      {
+        //
+        // Check every 10 minutes until archetypes are updated for all processed
+        // events. This can take between 20-30 minutes for all external sources
+        // to be updated.
+        //
+        // This will send a request to the local server to handle updating the
+        // archetype entries for the processed events.
+        //
+        using (var client = new HttpClient())
+        {
+          HttpResponseMessage res = null!;
+          var endpoint = "/events/update_archetypes";
+          int retries = 3;
+          while (retries-- > 0 && !res.IsSuccessStatusCode)
+          {
+            await Task.Delay(TimeSpan.FromMinutes(10));
+            res = await client.PostAsync($"http://localhost:3000{endpoint}", null);
+          }
+
+          // Check if any of the requests were successful.
+          if (res.IsSuccessStatusCode)
+          {
+            Console.WriteLine($"Successfully updated archetypes.");
+          }
+          else
+          {
+            Console.WriteLine($"Was unable to update archetypes.");
+          }
+        }
+      }
       // Clear any small object caches to prevent memory leaks on the client.
       Client.ClearCaches();
+      await Task.Delay(TimeSpan.FromMinutes(5));
     }
   }
 
