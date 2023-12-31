@@ -122,8 +122,6 @@ export async function GetEventUrl(page: any, id: number): Promise<string> {
 
   // Match each tournament page by it's source MTGO url.
   const match = await FilterEventList(page, id, events);
-  if (!match)
-    throw new Error(`Event ${name} #${id} not found`);
 
   return match;
 }

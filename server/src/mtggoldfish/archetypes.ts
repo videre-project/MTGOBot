@@ -4,7 +4,6 @@
 */
 
 import { DeckComposite, Archetype } from '../database/types.js';
-import { GetEventUrl } from '../mtggoldfish/events.js';
 
 
 /**
@@ -126,20 +125,17 @@ export async function GetPlayerArchetypes(page: any, url: string) : Promise<IPla
 /**
  * Builds a list of archetype entries from the given deck entries.
  * @param page The puppeteer page object
- * @param eventId The id of the event to retrieve
+ * @param url The url of the event to retrieve
  * @param decks A list of unlabeled deck entries
  * @returns A list of archetype entries
  */
 export async function GetArchetypes(
   page: any,
-  eventId: number,
+  url: string,
   decks: DeckComposite[]
 ): Promise<Archetype[]> {
-  // Get the event url and map players to their archetypes
-  const url = await GetEventUrl(page, eventId);
-  const archetypeMap = await GetPlayerArchetypes(page, url);
-
   // Filter deck entries with a player key matching the archetype mapping
+  const archetypeMap = await GetPlayerArchetypes(page, url);
   const archetypes: Archetype[] = [];
   decks
     .filter((d) => archetypeMap.hasOwnProperty(d.player))

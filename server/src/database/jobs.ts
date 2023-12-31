@@ -6,6 +6,7 @@
 import sql from './sql.js';
 import { DeckComposite, EventFragment, Archetype } from './types.js';
 import { GetArchetypes } from '../mtggoldfish/archetypes.js';
+import { GetEventUrl } from '../mtggoldfish/events.js';
 import { GetOffset } from '../dates.js';
 
 
@@ -49,33 +50,34 @@ export async function UpdateArchetypes(page: any, decks: DeckComposite[] = null)
       });
     });
 
-  let transactionSuccess = false;
-  for (const { id: eventId, name, date } of events) {
-    try
-    {
-      // Filter for events that contain at least 4 unlabeled decks.
-      const eventDecks = decks.filter((d) => d.event_id == eventId);
-      if (eventDecks.length < 4) continue;
-      console.log(`Updating archetypes for event ${name} #${eventId}`);
+  let transactionSuccess = true;
+  for (const { id: eventId, name } of events) {
+    // Filter for events that contain at least 4 unlabeled decks.
+    const eventDecks = decks.filter((d) => d.event_id == eventId);
+    if (eventDecks.length < 4) continue;
+    console.log(`Updating archetypes for event ${name} #${eventId}`);
 
-      // Build the archetype entries for the event from the deck entries.
-      const archetypes = await GetArchetypes(page, eventId, eventDecks);
-
-      // Insert the archetype entries into the Archetypes table.
-      // - On conflict, update the entry's archetype and archetype_id fields.
-      await sql`
-        INSERT INTO Archetypes (id, deck_id, name, archetype, archetype_id)
-        VALUES ${sql(archetypes.map((a: Archetype) => Object.values(a)))}
-        ON CONFLICT (deck_id) DO UPDATE SET
-          archetype = COALESCE(archetypes.archetype, EXCLUDED.archetype),
-          archetype_id = COALESCE(archetypes.archetype_id, EXCLUDED.archetype_id)
-      `;
-    }
-    catch (e: any)
-    {
-      console.error(`Failed to update archetypes for event ${eventId}: ${e.stack}`);
+    // Try to fetch the event url based on the event metadata.
+    const url = await GetEventUrl(page, eventId);
+    if (!url) {
       transactionSuccess = false;
+      console.log("--> Could not find event url. Skipping...");
+      continue; // Skip this event if the url could not be found.
     }
+
+    // Build the archetype entries for the event from the deck entries.
+    const archetypes = await GetArchetypes(page, url, eventDecks);
+
+    // Insert the archetype entries into the Archetypes table.
+    // - On conflict, update the entry's archetype and archetype_id fields.
+    await sql`
+      INSERT INTO Archetypes (id, deck_id, name, archetype, archetype_id)
+      VALUES ${sql(archetypes.map((a: Archetype) => Object.values(a)))}
+      ON CONFLICT (deck_id) DO UPDATE SET
+        archetype = COALESCE(archetypes.archetype, EXCLUDED.archetype),
+        archetype_id = COALESCE(archetypes.archetype_id, EXCLUDED.archetype_id)
+    `;
+    console.log(`--> ${archetypes.length} / ${eventDecks.length} archetypes updated.`);
   }
 
   return transactionSuccess;

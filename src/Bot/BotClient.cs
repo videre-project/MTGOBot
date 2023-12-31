@@ -101,20 +101,11 @@ public class BotClient : DLRWrapper<Client>, IDisposable
           HttpResponseMessage res = null!;
           var endpoint = "/events/update_archetypes";
           int retries = 3;
-          while (retries-- > 0 && !res.IsSuccessStatusCode)
+          while (retries-- > 0)
           {
             await Task.Delay(TimeSpan.FromMinutes(10));
             res = await client.PostAsync($"http://localhost:3000{endpoint}", null);
-          }
-
-          // Check if any of the requests were successful.
-          if (res.IsSuccessStatusCode)
-          {
-            Console.WriteLine($"Successfully updated archetypes.");
-          }
-          else
-          {
-            Console.WriteLine($"Was unable to update archetypes.");
+            if (res.IsSuccessStatusCode) break;
           }
         }
       }

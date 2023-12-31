@@ -147,7 +147,7 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
       }
       catch (Exception e)
       {
-        Console.WriteLine($"Failed to process event '{item.Name}': {e}");
+        Console.WriteLine($"Failed to process event '{item.Name}': {e.Message}");
         if (item.Retries-- <= 0)
         {
           Console.WriteLine($"Event '{item.Name}' has exceeded the maximum number of retries, skipping...");

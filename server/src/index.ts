@@ -11,13 +11,17 @@ import { UseOptimizedDefaults } from './puppeteer/stealth.js';
 
 const app = express();
 
-// Initialize the browser
-const { browser, page } = await UseOptimizedDefaults({ headless: true });
-page.setCacheEnabled(false);
-
 app.post('/events/update_archetypes', async (req, res) => {
+  // Initialize the browser
+  const { browser, page } = await UseOptimizedDefaults({ headless: true });
+  page.setCacheEnabled(false);
+
   const result = await UpdateArchetypes(page);
   res.sendStatus(result ? 200 : 500);
+
+  // Close the browser
+  await page.close();
+  await browser.close();
 });
 
 const port = 3000;
@@ -25,8 +29,3 @@ app.listen(port, () => {
   console.clear();
   console.log(`Listening on port ${port}`);
 });
-
-
-// Cleanup the browser
-await page.close();
-await browser.close();
