@@ -65,7 +65,7 @@ export async function GetPlayerArchetypes(page: any, url: string) : Promise<IPla
   // Navigate to the event url and extract the archetype groups.
   const archetypes = await GetEventArchetypes(page, url);
 
-  // Replace all text after the '#' in the url
+  // Replace all text after the archor in the url
   url = page.url().replace(/#.*/, '');
 
   // Enumerate over tournament standings pagination to collect player archetypes

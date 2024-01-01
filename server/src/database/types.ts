@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+/**
+ * Represents a deck entry and its associated event metadata.
+ */
 export type DeckComposite = {
   id: number;
   event_id: number;
@@ -11,12 +14,18 @@ export type DeckComposite = {
   player: string;
 };
 
+/**
+ * Represents basic event metadata derived from a deck entry.
+ */
 export type EventFragment = {
   id: number;
   name: string;
   date: Date;
 };
 
+/**
+ * Represents a deck's archetype information.
+ */
 export type Archetype = {
   id: number;
   deck_id: number;
