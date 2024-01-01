@@ -75,6 +75,14 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         password: DotEnv.Get("PASSWORD")
       ).Wait();
     }
+
+    // Teardown the bot when the MTGO client disconnects.
+    // This will trigger a restart of the client when using a runner.
+    Client.IsConnectedChanged += delegate(object? sender)
+    {
+      Console.WriteLine("The MTGO client has been disconnected. Stopping...");
+      Environment.Exit(-1);
+    };
   }
 
   /// <summary>
