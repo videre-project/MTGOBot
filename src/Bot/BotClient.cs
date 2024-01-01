@@ -81,6 +81,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
     Client.IsConnectedChanged += delegate(object? sender)
     {
       Console.WriteLine("The MTGO client has been disconnected. Stopping...");
+      Client.Dispose();
       Environment.Exit(-1);
     };
   }
