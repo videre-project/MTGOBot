@@ -11,7 +11,7 @@ import { UseOptimizedDefaults } from './puppeteer/stealth.js';
 
 const app = express();
 
-app.post('/events/update_archetypes', async (req, res) => {
+app.post('/events/update-archetypes', async (req, res) => {
   // Initialize the browser
   const { browser, page } = await UseOptimizedDefaults({ headless: true });
   page.setCacheEnabled(false);

@@ -107,7 +107,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         using (var client = new HttpClient())
         {
           HttpResponseMessage res = null!;
-          var endpoint = "/events/update_archetypes";
+          var endpoint = "/events/update-archetypes";
           int retries = 3;
           while (retries-- > 0)
           {

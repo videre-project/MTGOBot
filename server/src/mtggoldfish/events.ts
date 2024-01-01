@@ -67,13 +67,13 @@ export async function GetEvents(
 /**
  * Filters the given list of events by the given event id.
  * @param page The puppeteer page object
- * @param id The event id to match
+ * @param source The source MTGO url for the event
  * @param events The list of events to search
  * @returns The MTGGoldfish url for the event
  */
 export async function FilterEventList(
   page: any,
-  id: number,
+  source: string,
   events: IEventList,
 ) : Promise<string | null> {
   // Match each tournament page by it's source MTGO url.
@@ -83,17 +83,12 @@ export async function FilterEventList(
     // Get the source url MTGGoldfish sourced the event from.
     await page.waitForTimeout(100);
     await page.goto(url, { waitUntil: 'domcontentloaded' });
-    const { date, source } = await page.evaluate(() => {
+    const match = await page.evaluate(() => {
       const details = document?.querySelector('div > p:nth-child(6)');
-      const date = details?.textContent?.split('\n')?.[3];
-      const source = details?.querySelector('a')?.href;
-
-      return { date, source };
+      return details?.querySelector('a')?.href;
     });
 
-    if (source?.startsWith('https://www.mtgo.com/decklist/') &&
-        source?.endsWith(new Date(date).toISOString().split('T')[0] + id))
-      return url;
+    if (match == source) return url;
   }
 
   return null;
@@ -113,7 +108,11 @@ export async function GetEventUrl(page: any, id: number): Promise<string> {
     throw new Error(`Event ${id} not found`);
 
   const event = (await res.json())['tournament_cover_page_list'][0];
-  const { description: name, starttime: date, site_name } = event;
+  const {
+    description: name,
+    starttime: date,
+    site_name: slug
+  } = event;
 
   // Search a day before and after the event date
   const startDate = GetOffset(new Date(date), -1);
@@ -121,7 +120,10 @@ export async function GetEventUrl(page: any, id: number): Promise<string> {
   const events = await GetEvents(page, name, startDate, endDate);
 
   // Match each tournament page by it's source MTGO url.
-  const match = await FilterEventList(page, id, events);
+  const source = `https://www.mtgo.com/decklist/${slug}`;
+  const match = await FilterEventList(page, source, events);
+  if (!match)
+    throw new Error(`Event ${id} returned an invalid url`);
 
   return match;
 }

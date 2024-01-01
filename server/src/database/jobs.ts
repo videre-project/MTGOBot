@@ -67,6 +67,11 @@ export async function UpdateArchetypes(page: any, decks: DeckComposite[] = null)
 
     // Build the archetype entries for the event from the deck entries.
     const archetypes = await GetArchetypes(page, url, eventDecks);
+    if (!archetypes.length) {
+      transactionSuccess = false;
+      console.log("--> Could not find archetypes. Skipping...");
+      continue; // Skip this event if no archetypes could be found.
+    }
 
     // Insert the archetype entries into the Archetypes table.
     // - On conflict, update the entry's archetype and archetype_id fields.
