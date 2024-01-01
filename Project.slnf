@@ -1,0 +1,8 @@
+{
+  "solution": {
+    "path": "lib\\MTGOSDK.sln",
+    "projects": [
+      "..\\src\\MTGOBot.csproj"
+    ]
+  }
+}
