@@ -101,7 +101,7 @@ export async function FilterEventList(
  * @returns The MTGGoldfish url for the event
  * @throws An error if the event is not found
  */
-export async function GetEventUrl(page: any, id: number): Promise<string> {
+export async function GetEventUrl(page: any, id: number): Promise<string | null> {
   // Get the event name and date from the Daybreak API
   const res = await fetch(`https://census.daybreakgames.com/s:dgc/get/mtgo:v1/tournament_cover_page?event_id=${id}`);
   if (!res.ok)
@@ -122,8 +122,6 @@ export async function GetEventUrl(page: any, id: number): Promise<string> {
   // Match each tournament page by it's source MTGO url.
   const source = `https://www.mtgo.com/decklist/${slug}`;
   const match = await FilterEventList(page, source, events);
-  if (!match)
-    throw new Error(`Event ${id} returned an invalid url`);
 
   return match;
 }
