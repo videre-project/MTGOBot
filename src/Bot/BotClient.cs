@@ -68,6 +68,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         : new ClientOptions
           {
             CreateProcess = true,
+            StartMinimized = true,
             DestroyOnExit = true,
             AcceptEULAPrompt = true
           }
