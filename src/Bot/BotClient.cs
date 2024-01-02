@@ -4,6 +4,7 @@
 **/
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -18,6 +19,12 @@ namespace Bot;
 
 public class BotClient : DLRWrapper<Client>, IDisposable
 {
+  /// <summary>
+  /// The current uptime of the bot client.
+  /// </summary>
+  public static TimeSpan Uptime =>
+    DateTime.UtcNow - Process.GetCurrentProcess().StartTime.ToUniversalTime();
+
   /// <summary>
   /// The next reset time to restart the MTGO client and event queue.
   /// </summary>
@@ -95,7 +102,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
     // Start loop that waits every 5 minutes before starting the next batch.
     while (DateTime.UtcNow < ResetTime)
     {
-      if (await queue.ProcessQueue())
+      if (await queue.ProcessQueue() || Uptime < TimeSpan.FromMinutes(5))
       {
         //
         // Check every 10 minutes until archetypes are updated for all processed
@@ -109,12 +116,12 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         {
           HttpResponseMessage res = null!;
           var endpoint = "/events/update-archetypes";
-          int retries = 3;
+          int retries = 7;
           while (retries-- > 0)
           {
-            await Task.Delay(TimeSpan.FromMinutes(10));
             res = await client.PostAsync($"http://localhost:3000{endpoint}", null);
             if (res.IsSuccessStatusCode) break;
+            await Task.Delay(TimeSpan.FromMinutes(10));
           }
         }
       }
