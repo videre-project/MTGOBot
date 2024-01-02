@@ -98,22 +98,39 @@ export async function GetPlayerArchetypes(page: any, url: string) : Promise<IPla
         // e.g. 'Mono-Green Hardened Scales' -> 'Hardened Scales'
         const fallback = name.split(' ').slice(1).join(' ') || null;
 
-        // Include any groups that contain the fallback archetype name
-        // e.g. '4c Omnath' -> '4/5c Omnath'
-        const group = Object.keys(archetypes)
-          .find((key) => key.includes('/') && key.endsWith(fallback));
-
-        // Attempt to determine the archetype id by it's given name or group
+        // Attempt to determine the archetype id by it's given name
         let archetype_id = archetypes[name];
-        let archetype = archetype_id ? name : (group ?? fallback);
+        let archetype = archetype_id ? name : fallback;
         if (!archetype_id) archetype_id = archetypes[archetype];
-        if (!archetype_id) archetype = undefined;
 
         acc[player] = { id, name, archetype, archetype_id };
 
         return acc;
       }, {});
     }, archetypes);
+
+    // For any unmatched decks, get the archetype category from the deck page
+    for (const [player, { id, archetype_id }] of Object.entries(playerPage)) {
+      if (!id || archetype_id) continue;
+
+      // Navigate to the deck page from the deck id
+      const deck_url = `https://www.mtggoldfish.com/deck/${id}`;
+      await page.waitForTimeout(100);
+      await page.goto(deck_url, { waitUntil: 'domcontentloaded' });
+
+      // Extract the archetype name from on the deck info's archetype uri
+      const archetype = await page.evaluate(() => {
+        const info = document.querySelector('p[class="deck-container-information"]');
+        const archetypeLink = Array.from(info.querySelectorAll('a'))
+          .find((link) => link.href.includes('/archetype/'));
+
+        return archetypeLink?.textContent;
+      });
+
+      // Assign the archetype name and id (if found) to the player entry
+      playerPage[player].archetype = archetype;
+      playerPage[player].archetype_id = archetypes[archetype];
+    }
 
     playerArchetypes = { ...playerArchetypes, ...playerPage };
   }
