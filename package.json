@@ -1,0 +1,13 @@
+{
+  "name": "project",
+  "version": "1.0.0",
+  "scripts": {
+    "start:server": "pnpm -C server run start",
+    "start:bot": "dotnet run --project src/MTGOBot.csproj --no-build",
+    "start": "pnpm run \"/^start:.*/\" --parallel"
+  },
+  "engines": {
+    "node": ">= 18",
+    "pnpm": ">= 3"
+  }
+}

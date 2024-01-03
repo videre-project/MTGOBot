@@ -20,6 +20,9 @@ var bot = new Runner("BotClient", async () =>
 });
 bot.Start();
 
-// Block the main thread until a key is pressed.
-Console.WriteLine("Press any key to exit.");
-Console.ReadKey();
+// If provided a console, block the main thread until a key is pressed.
+if (!Console.IsInputRedirected && Console.KeyAvailable)
+{
+  Console.WriteLine("Press any key to exit.");
+  Console.ReadKey();
+}
