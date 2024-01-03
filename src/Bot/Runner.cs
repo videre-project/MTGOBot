@@ -107,7 +107,7 @@ public class Runner
     }
     // Restart the bot on exit unless it has exited early after exceeding the
     // maximum number of retries (if specified), otherwise exit the runner.
-    while((tries = exitEarly ? tries + 1 : 0) <= (MaxRetries ?? 1));
+    while((tries = exitEarly ? tries + 1 : 0) < (MaxRetries ?? 1));
     Environment.Exit(-1);
   }
 }
