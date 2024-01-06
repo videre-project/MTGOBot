@@ -13,7 +13,7 @@ import { UseOptimizedDefaults } from './puppeteer/stealth.js';
 const app = express();
 
 // Initialize the browser
-const { browser, page } = await UseOptimizedDefaults({ headless: true });
+const { browser, page } = await UseOptimizedDefaults();
 page.setCacheEnabled(false);
 
 app.get('/events/get-archetypes', async (req, res) => {

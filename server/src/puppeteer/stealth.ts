@@ -11,16 +11,21 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 /*
  * Launches a headless browser instance with optimized defaults.
  */
-export async function UseOptimizedDefaults({
+export async function UseOptimizedDefaults(
   abort = ['image', 'font', 'stylesheet'],
-  args = ['--no-sandbox'],
-  headless = true,
-}) {
+  args: string[] = ['--no-sandbox'],
+  headless: boolean | "new" = "new",
+) {
   puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
   puppeteer.use(StealthPlugin());
-  // const browser = await puppeteer.launch({ headless: "new", args });
 
-  const browser = await puppeteer.launch({ headless: "new", args });
+  const browser = await puppeteer.launch({
+    headless,
+    args,
+    // Disable timeout for all puppeteer operations
+    protocolTimeout: 0,
+    timeout: 0,
+  });
 
   const page = await browser.pages().then((pages) => pages[0]);
   page.setDefaultNavigationTimeout(0);
