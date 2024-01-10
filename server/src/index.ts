@@ -28,8 +28,15 @@ app.get('/events/get-archetypes', async (req, res) => {
 });
 
 app.post('/events/update-archetypes', async (req, res) => {
-  const result = await UpdateArchetypes(page);
-  res.sendStatus(result ? 200 : 500);
+  try
+  {
+    const result = await UpdateArchetypes(page);
+    res.sendStatus(result ? 200 : 500);
+  }
+  catch
+  {
+    res.sendStatus(500);
+  }
 });
 
 const port = 3000;
@@ -37,6 +44,12 @@ const server = app.listen(port, () => {
   console.clear();
   console.log(`Listening on port ${port}`);
 });
+
+// // Error handler
+// app.use((err, req, res, next) => {
+//   console.error(err.stack);
+//   next(err);
+// });
 
 process.on('SIGTERM', () => {
   server.close(async () => {
