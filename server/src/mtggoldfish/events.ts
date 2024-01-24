@@ -83,10 +83,12 @@ export async function FilterEventList(
     // Get the source url MTGGoldfish sourced the event from.
     await page.waitForTimeout(100);
     await page.goto(url, { waitUntil: 'domcontentloaded' });
-    const match = await page.evaluate(() => {
-      const details = document?.querySelector('div > p:nth-child(6)');
-      return details?.querySelector('a')?.href;
-    });
+
+    const match = await page.evaluate((source) =>
+      // @ts-ignore - This is valid access to the anchor element's properties.
+      document?.querySelector(`div > p > a[href="${source}"]`)?.href,
+      source
+    );
 
     if (match == source) return url;
   }
