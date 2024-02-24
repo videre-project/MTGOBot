@@ -25,6 +25,9 @@ app.get('/events/get-archetypes', async (req, res) => {
 
   var archetypes = await GetPlayerArchetypes(page, url);
   res.json(archetypes);
+
+  // navigate to blank page
+  await page.goto('about:blank');
 });
 
 app.post('/events/update-archetypes', async (req, res) => {
@@ -37,6 +40,9 @@ app.post('/events/update-archetypes', async (req, res) => {
   {
     res.sendStatus(500);
   }
+
+  // navigate to blank page
+  await page.goto('about:blank');
 });
 
 const port = 3000;
