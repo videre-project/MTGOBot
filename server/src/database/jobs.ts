@@ -22,8 +22,8 @@ export async function UpdateArchetypes(page: any, decks: DeckComposite[] = null)
   if (!decks?.length)
   {
     // Filter all deck entries for those without a corresponding archetype entry
-    // that came from events created within the last 3 weeks.
-    const minDate = GetOffset(new Date(), -21).toISOString().split('T')[0];
+    // that came from events created within the last 7 days.
+    const minDate = GetOffset(new Date(), -7).toISOString().split('T')[0];
     decks = await sql`
       SELECT d.id, d.event_id, e.name as event_name, e.date as event_date, d.player
       FROM decks d
