@@ -50,13 +50,30 @@ public class BotClient : DLRWrapper<Client>, IDisposable
   public Client Client { get; private set; }
 
   public BotClient(bool restart = false) : base(
-    factory: async delegate
+    factory: async () =>
     {
       // Wait until the main MTGO server is online.
-      while (!await ServerStatus.IsOnline())
+      bool online = false;
+      while (!online)
       {
-        restart |= true; // Restart after downtime.
-        await Task.Delay(TimeSpan.FromMinutes(30));
+        try
+        {
+          online = await ServerStatus.IsOnline();
+        }
+        catch (Exception)
+        {
+          //
+          // If an exception is thrown, we have found an issue with the API.
+          // For now, we'll assume the servers are online and test through login.
+          //
+          break;
+        }
+        if (!online)
+        {
+          Console.WriteLine("MTGO servers are currently offline. Waiting...");
+          await Task.Delay(TimeSpan.FromMinutes(30));
+          restart |= true; // Restart after downtime.
+        }
       }
     })
   {
