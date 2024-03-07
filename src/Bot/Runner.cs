@@ -19,7 +19,15 @@ public class Runner
   /// <summary>
   /// Starts the runner subprocess.
   /// </summary>
-  public void Start() => lambda?.Invoke();
+  public void Start()
+  {
+    if (lambda != null) {
+      // Handle any AggregateExceptions thrown by the lambda to ensure
+      // that the runner subprocess doesn't swallow the exception.
+      try { lambda.Invoke(); }
+      catch (AggregateException e) { throw e.InnerException ?? e; }
+    }
+  }
 
   public Runner(string name, Func<Task> factory)
     : this(name, delegate { factory.Invoke().Wait(); })
