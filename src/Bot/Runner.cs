@@ -4,6 +4,7 @@
 **/
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -14,19 +15,25 @@ namespace Bot;
 
 public class Runner
 {
+  // <summary>
+  // The factory method for starting the runner subprocess.
+  // </summary>
   private Action? lambda = null;
+
+  // <summary>
+  // A list of names of running runner subprocesses.
+  // </summary>
+  private static ConcurrentDictionary<string, Runner> RunnerThreads = new();
 
   /// <summary>
   /// Starts the runner subprocess.
   /// </summary>
   public void Start()
   {
-    if (lambda != null) {
-      // Handle any AggregateExceptions thrown by the lambda to ensure
-      // that the runner subprocess doesn't swallow the exception.
-      try { lambda.Invoke(); }
-      catch (AggregateException e) { throw e.InnerException ?? e; }
-    }
+    // Handle any AggregateExceptions thrown by the lambda to ensure
+    // that the runner subprocess doesn't swallow the exception.
+    try { lambda?.Invoke(); }
+    catch (AggregateException e) { throw e.InnerException ?? e; }
   }
 
   public Runner(string name, Func<Task> factory)
@@ -46,7 +53,7 @@ public class Runner
       });
     }
     // Otherwise, start a new thread to manage the runner.
-    else if (!cargs.Contains("--runner"))
+    else if (!cargs.Contains("--runner") && RunnerThreads.TryAdd(name, this))
     {
       lambda = new Action(() =>
       {
@@ -116,6 +123,5 @@ public class Runner
     // Restart the bot on exit unless it has exited early after exceeding the
     // maximum number of retries (if specified), otherwise exit the runner.
     while((tries = exitEarly ? tries + 1 : 0) < (MaxRetries ?? 1));
-    Environment.Exit(-1);
   }
 }
