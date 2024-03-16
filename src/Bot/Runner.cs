@@ -37,7 +37,7 @@ public class Runner
   }
 
   public Runner(string name, Func<Task> factory)
-    : this(name, delegate { factory.Invoke().Wait(); })
+    : this(name, delegate { (factory.Invoke()).GetAwaiter().GetResult(); })
   { }
 
   public Runner(string name, Action factory)
