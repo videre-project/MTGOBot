@@ -59,6 +59,10 @@ public struct EventEntry
     {
       if (tournament.ToString().Contains(kind.ToString()))
         return (EventType)kind;
+
+      // Special case for Last Chance Qualifiers
+      if (tournament.ToString().Contains("Last Chance"))
+        return EventType.Qualifier;
     }
 
     throw new ArgumentException(
