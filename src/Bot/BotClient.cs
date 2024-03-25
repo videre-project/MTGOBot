@@ -130,14 +130,17 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         // This will send a request to the local server to handle updating the
         // archetype entries for the processed events.
         //
-        using (var client = new HttpClient())
+        using (var client = new HttpClient()
+        {
+          BaseAddress = new Uri("http://localhost:3000"),
+          Timeout = TimeSpan.FromMinutes(5)
+        })
         {
           HttpResponseMessage res = null!;
-          var endpoint = "/events/update-archetypes";
           int retries = 7;
           while (retries-- > 0)
           {
-            res = await client.PostAsync($"http://localhost:3000{endpoint}", null);
+            res = await client.PostAsync("/events/update-archetypes", null);
             if (res.IsSuccessStatusCode) break;
             await Task.Delay(TimeSpan.FromMinutes(10));
           }
