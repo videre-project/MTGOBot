@@ -76,19 +76,19 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
       Console.WriteLine($"Event '{@event}' is already completed, adding to queue...");
       Queue.Enqueue(new QueueItem(@event));
     }
-    else
-    {
-      @event.TournamentStateChanged += new EventCallback<
-        TournamentStateChangedEventArgs
-      >((e) =>
-      {
-        if (e.NewValue == TournamentState.Finished)
-        {
-          Console.WriteLine($"Event '{@event}' is now finished, adding to queue...");
-          Queue.Enqueue(new QueueItem(@event));
-        }
-      });
-    }
+    // else
+    // {
+    //   @event.TournamentStateChanged += new EventCallback<
+    //     TournamentStateChangedEventArgs
+    //   >((e) =>
+    //   {
+    //     if (e.NewValue == TournamentState.Finished)
+    //     {
+    //       Console.WriteLine($"Event '{@event}' is now finished, adding to queue...");
+    //       Queue.Enqueue(new QueueItem(@event));
+    //     }
+    //   });
+    // }
 
     return true;
   }
