@@ -84,10 +84,9 @@ export async function FilterEventList(
     await page.waitForTimeout(100);
     await page.goto(url, { waitUntil: 'domcontentloaded' });
 
-    const match = await page.evaluate((source) =>
+    const match = await page.evaluate(() =>
       // @ts-ignore - This is valid access to the anchor element's properties.
-      document?.querySelector(`div > p > a[href="${source}"]`)?.href,
-      source
+      document?.querySelector(`div > p > a[href*="mtgo.com/decklist/"]`)?.href
     );
 
     if (match == source) return url;
