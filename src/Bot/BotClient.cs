@@ -49,11 +49,11 @@ public class BotClient : DLRWrapper<Client>, IDisposable
   /// </summary>
   public Client Client { get; private set; }
 
-  public BotClient(bool restart = false) : base(
+  public BotClient(bool restart = false, bool ignoreStatusCheck = false) : base(
     factory: async () =>
     {
       // Wait until the main MTGO server is online.
-      bool online = false;
+      bool online = ignoreStatusCheck;
       while (!online)
       {
         try

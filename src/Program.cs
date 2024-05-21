@@ -12,7 +12,7 @@ using Bot;
 var bot = new Runner("BotClient", async () =>
 {
   // Main entry point for the MTGO Bot.
-  using (var client = new BotClient(restart: true))
+  using (var client = new BotClient(restart: true, ignoreStatusCheck: true))
   {
     Console.WriteLine("Finished loading.");
     await client.StartEventQueue();
