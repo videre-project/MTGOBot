@@ -4,6 +4,7 @@
 **/
 
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -58,6 +59,7 @@ public struct StandingEntry
     foreach(var match in standing.PreviousMatches)
     {
       matches.Add(new MatchEntry(eventId, match, standing.Player));
+      Thread.Sleep(250);
     }
     return matches;
   }

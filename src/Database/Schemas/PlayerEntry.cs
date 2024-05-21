@@ -4,6 +4,7 @@
 **/
 
 using System.Collections.Generic;
+using System.Threading;
 
 using MTGOSDK.API.Play.Tournaments;
 using MTGOSDK.API.Users;
@@ -28,6 +29,7 @@ public struct PlayerEntry
     foreach (var player in tournament.Players)
     {
       players.Add(new PlayerEntry(player));
+      Thread.Sleep(250);
     }
     return players;
   }

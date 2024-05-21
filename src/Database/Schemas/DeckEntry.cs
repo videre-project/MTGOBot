@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json.Linq;
@@ -93,6 +94,7 @@ public struct DeckEntry
         var user = new User(playerId, deck["player"].ToObject<string>());
         var deckEntry = new DeckEntry(eventId, user, deck);
         decks.Add(deckEntry);
+        Thread.Sleep(250);
       }
     }
 

@@ -5,6 +5,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 using MTGOSDK.API.Play.Tournaments;
 using MTGOSDK.API.Users;
@@ -68,6 +69,7 @@ public struct MatchEntry
     foreach(var game in match.GameStandingRecords)
     {
       games.Add(new GameResult(game, player));
+      Thread.Sleep(250);
     }
     return games.ToArray();
   }

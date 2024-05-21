@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using MTGOSDK.API.Play;
@@ -104,6 +105,7 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
     foreach (var @event in events)
     {
       added &= await AddEventToQueue(@event);
+      Thread.Sleep(250);
     }
 
     return added;
