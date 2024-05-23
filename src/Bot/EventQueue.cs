@@ -134,17 +134,20 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
     while (Queue.TryDequeue(out QueueItem item))
     {
       Console.WriteLine($"Processing event '{item.Name}' ...");
+
+      // Get the initial time
+      var start = DateTime.Now;
       try
       {
         // Wait until the event is available in the EventManager.
         var tournament = await TryUntil(() => EventManager.GetEvent(item.Id));
         // Build the composite event entry to add to the database.
         var composite = item.entry ?? new EventComposite(tournament as Tournament);
-        Console.WriteLine($"--> Got event entry for {tournament}.");
+        Console.WriteLine($"--> Got event entry for {tournament} ({(DateTime.Now - start).TotalSeconds} s).");
         item.entry ??= composite;
         // Add the event to the database.
         await EventRepository.AddEvent(composite);
-        Console.WriteLine($"--> Added event '{tournament}' to the database.");
+        Console.WriteLine($"--> Added event '{tournament}' to the database ({(DateTime.Now - start).TotalSeconds} s).");
         hasUpdated |= true;
       }
       catch (Exception e)
