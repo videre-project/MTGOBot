@@ -105,7 +105,6 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
     foreach (var @event in events)
     {
       added &= await AddEventToQueue(@event);
-      Thread.Sleep(250);
     }
 
     return added;
@@ -133,7 +132,7 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
     bool hasUpdated = false;
     while (Queue.TryDequeue(out QueueItem item))
     {
-      Console.WriteLine($"Processing event '{item.Name}' ...");
+      Console.WriteLine($"\nProcessing event '{item.Name}' ...");
 
       // Get the initial time
       var start = DateTime.Now;
@@ -152,7 +151,14 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
       }
       catch (Exception e)
       {
-        Console.WriteLine($"Failed to process event '{item.Name}': {e.Message}");
+        Console.WriteLine($"Failed to process event '{item.Name}': {e.ToString()}");
+
+        // If the exception has an inner exception, print it.
+        if (e.InnerException != null)
+        {
+          Console.WriteLine($"--> Inner Exception: {e.InnerException.ToString()}");
+        }
+
         if (item.Retries-- <= 0)
         {
           Console.WriteLine($"Event '{item.Name}' has exceeded the maximum number of retries, skipping...");

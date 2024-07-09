@@ -7,6 +7,7 @@ import express from 'express';
 
 import { UpdateArchetypes } from './database/jobs.js';
 import { GetPlayerArchetypes } from './mtggoldfish/archetypes.js';
+import { GetDecklists } from './mtgo/decklists.js';
 import { UseOptimizedDefaults } from './puppeteer/stealth.js';
 
 
@@ -15,6 +16,30 @@ const app = express();
 // Initialize the browser
 const { browser, page } = await UseOptimizedDefaults();
 page.setCacheEnabled(false);
+
+// Fetch the event page to extract the `window.MTGO.decklists.data` object.
+app.get('/census/decklists', async (req, res) => {
+  const id = req.query.id as string;
+  const name = req.query.name as string;
+  const date = new Date(req.query.date as string);
+  if (!id || !name || !date) {
+    console.log('Invalid query parameters');
+    res.sendStatus(400);
+    return;
+  }
+
+  const decklists = await GetDecklists(page, parseInt(id), name, date);
+  if (!decklists.length) {
+    console.log(`Could not find decklists for event ${name} #${id}`);
+    res.sendStatus(500);
+    return;
+  }
+
+  res.json({ tournament_decklist_by_id_list: decklists });
+
+  // navigate to blank page
+  await page.goto('about:blank');
+});
 
 app.get('/events/get-archetypes', async (req, res) => {
   const url = req.query.url as string;

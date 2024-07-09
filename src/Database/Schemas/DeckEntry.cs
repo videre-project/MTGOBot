@@ -74,8 +74,10 @@ public struct DeckEntry
     using (HttpClient client = new HttpClient())
     {
       // Fetch the decklists for the event.
+      string name = tournament.Description;
       int eventId = tournament.Id;
-      string url = $"https://census.daybreakgames.com/get/mtgo:v1/tournament_decklist_by_id?tournamentid={eventId}";
+      string date = tournament.StartTime.ToString("yyyy-MM-dd");
+      string url = $"http://localhost:3000/census/decklists?name={name}&id={eventId}&date={date}";
       using var response = await client.GetAsync(url);
 
       if (!response.IsSuccessStatusCode)

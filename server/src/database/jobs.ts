@@ -1,5 +1,5 @@
 /* @file
- * Copyright (c) 2023, Cory Bennett. All rights reserved.
+ * Copyright (c) 2024, Cory Bennett. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
 */
 
@@ -14,15 +14,13 @@ import { GetOffset } from '../dates.js';
  * Updates the Archetypes table with the latest archetype information.
  * @param page The puppeteer page object.
  * @param decks The deck entries to update. If null, all unlabeled decks from
- *  the last 3 weeks will be updated.
+ *   the last 3 weeks will be updated.
  * @returns True if all transactions were successful, false otherwise.
  */
-export async function UpdateArchetypes(page: any, decks: DeckComposite[] = null)
-{
-  if (!decks?.length)
-  {
+export async function UpdateArchetypes(page: any, decks: DeckComposite[] = null) {
+  if (!decks?.length) {
     // Filter all deck entries for those without a corresponding archetype entry
-    // that came from events created within the last 7 days.
+    // that came from events created within the last 3 weeks.
     const minDate = GetOffset(new Date(), -7).toISOString().split('T')[0];
     decks = await sql`
       SELECT d.id, d.event_id, e.name as event_name, e.date as event_date, d.player
@@ -51,19 +49,20 @@ export async function UpdateArchetypes(page: any, decks: DeckComposite[] = null)
     });
 
   let transactionSuccess = true;
-  for (const { id: eventId, name } of events) {
+  for (const { id: eventId, name, date } of events) {
     // Filter for events that contain at least 4 unlabeled decks.
     const eventDecks = decks.filter((d) => d.event_id == eventId);
     if (eventDecks.length < 4) continue;
     console.log(`Updating archetypes for event ${name} #${eventId}`);
 
     // Try to fetch the event url based on the event metadata.
-    const url = await GetEventUrl(page, eventId);
+    const url = await GetEventUrl(page, eventId, name, date);
     if (!url) {
       transactionSuccess = false;
       console.log("--> Could not find event url. Skipping...");
       continue; // Skip this event if the url could not be found.
     }
+    console.log(`--> Found event url: ${url}`);
 
     // Build the archetype entries for the event from the deck entries.
     const archetypes = await GetArchetypes(page, url, eventDecks);

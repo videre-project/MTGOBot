@@ -9,8 +9,9 @@
  * @param offset The number of days to offset the date
  */
 export function GetOffset(d: Date, offset: number): Date {
-  d.setDate(d.getDate() + offset);
-  return d;
+  return new Date(d.getTime() + offset * 24*60*60*1000)
+  // d.setDate(d.getDate() + offset);
+  // return d;
 }
 
 /**

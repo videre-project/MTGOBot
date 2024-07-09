@@ -11,6 +11,7 @@ using MTGOSDK.API.Play;
 using MTGOSDK.API.Play.Tournaments;
 
 using Database.Schemas;
+using Database.Types;
 
 
 namespace Database;
@@ -21,7 +22,13 @@ public struct EventComposite(Tournament tournament)
   public ICollection<PlayerEntry>   players   = PlayerEntry.FromEvent(tournament);
   public ICollection<StandingEntry> standings = StandingEntry.FromEvent(tournament);
   public ICollection<MatchEntry>    matches   => standings.SelectMany(s => s.Matches).ToList();
-  public ICollection<DeckEntry>     decklists = DeckEntry.FromEvent(tournament).Result;
+  // public ICollection<DeckEntry>     decklists = DeckEntry.FromEvent(tournament).Result;
+  // public ICollection<DeckEntry>     decklists = default;
+  public ICollection<DeckEntry>     decklists =
+    // FIXME: Preliminary events are not yet published.
+    EventEntry.GetEventType(tournament) != EventType.Preliminary
+      ? DeckEntry.FromEvent(tournament).Result
+      : new List<DeckEntry>();
 
   public string DisplayName => tournament.ToString();
 

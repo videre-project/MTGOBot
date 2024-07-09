@@ -4,6 +4,7 @@
 */
 
 import { GetOffset, GetIntl } from '../dates.js';
+import { GetMTGOUrl } from '../mtgo/decklists.js';
 
 /**
  * Represents a list of MTGGoldfish events with their ids and names.
@@ -99,30 +100,30 @@ export async function FilterEventList(
  * Retrieves the MTGGoldfish url for the given event id.
  * @param page The puppeteer page object
  * @param id The event id
+ * @param name The event name
+ * @param date The event date
  * @returns The MTGGoldfish url for the event
  * @throws An error if the event is not found
  */
-export async function GetEventUrl(page: any, id: number): Promise<string | null> {
-  // Get the event name and date from the Daybreak API
-  const res = await fetch(`https://census.daybreakgames.com/s:dgc/get/mtgo:v1/tournament_cover_page?event_id=${id}`);
-  if (!res.ok)
-    throw new Error(`Event ${id} not found`);
-
-  const event = (await res.json())['tournament_cover_page_list'][0];
-  const {
-    description: name,
-    starttime: date,
-    site_name: slug
-  } = event;
-
-  // Search a day before and after the event date
-  const startDate = GetOffset(new Date(date), -1);
-  const endDate = GetOffset(new Date(date), +1);
+export async function GetEventUrl(
+    page: any,
+    id: number,
+    name: string,
+    date: Date): Promise<string> {
+  // Search before and after the given date for the event.
+  const offsets = [0, -1, +1, +2];
+  const startDate = GetOffset(new Date(date), Math.min(...offsets));
+  const endDate = GetOffset(new Date(date), Math.max(...offsets));
   const events = await GetEvents(page, name, startDate, endDate);
 
   // Match each tournament page by it's source MTGO url.
-  const source = `https://www.mtgo.com/decklist/${slug}`;
-  const match = await FilterEventList(page, source, events);
+  for (const offset of offsets) {
+    const candidateDate = GetOffset(date, offset);
+    const source = GetMTGOUrl(id, name, candidateDate);
+    const match = await FilterEventList(page, source, events);
 
-  return match;
+    if (match) return match;
+  }
+
+  throw new Error(`Event ${id} not found`);
 }
