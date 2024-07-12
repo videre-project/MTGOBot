@@ -3,12 +3,92 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+import { AsArray } from './helpers.js';
 import sql from './sql.js';
-import { DeckComposite, EventFragment, Archetype } from './types.js';
+import type {
+  DeckComposite,
+  EventFragment,
+  Archetype,
+  Deck,
+  CardQuantityPair,
+} from './types.js';
 import { GetArchetypes } from '../mtggoldfish/archetypes.js';
 import { GetEventUrl } from '../mtggoldfish/events.js';
+import { ICardEntry, GetDecklists } from '../mtgo/decklists.js';
 import { GetOffset } from '../dates.js';
 
+
+function parseDecklistField(d: Array<ICardEntry>): CardQuantityPair[] {
+  return d.map((c) => ({
+    id: parseInt(c.docid),
+    name: c.card_attributes.card_name,
+    quantity: parseInt(c.qty),
+  }));
+}
+
+/**
+ * Updates the Decks table with the latest event decklists.
+ * @param page The puppeteer page object.
+ * @param events The event metadata to update decks for. If null, all events
+ *   from the last 3 weeks will be updated.
+ * @returns True if all transactions were successful, false otherwise.
+ */
+export async function UpdateDecks(page: any, events: EventFragment[] = null) {
+  if (!events?.length) {
+    // Filter all events for those that contain standings entries without a
+    // corresponding deck entry from events created within the last 3 weeks.
+    const minDate = GetOffset(new Date(), -21).toISOString().split('T')[0];
+    events = await sql`
+      SELECT e.id, e.name, e.date
+      FROM events e
+      WHERE EXISTS (
+        SELECT 1
+        FROM standings s
+        WHERE e.id = s.event_id
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM decks d
+        WHERE e.id = d.event_id
+      )
+      AND e.date >= ${minDate}
+      AND e.kind != 'Preliminary' -- FIXME: Prelim events are not yet public.
+    `;
+  }
+
+  let transactionSuccess = true;
+  for (const { id: eventId, name, date } of events) {
+    console.log(`Updating decks for event ${name} #${eventId}`);
+    const decklists = await GetDecklists(page, eventId, name, date);
+    if (!decklists.length) {
+      transactionSuccess = false;
+      console.log("--> Could not find decklists. Skipping...");
+      continue; // Skip this event if no decklists could be found.
+    }
+
+    const decks = decklists.map((d) => ({
+      id: parseInt(d.decktournamentid),
+      event_id: eventId,
+      player: d.player,
+      mainboard: parseDecklistField(d.main_deck),
+      sideboard: parseDecklistField(d.sideboard_deck),
+    } as Deck));
+
+    // Insert the deck entries into the Decks table.
+    await sql`
+      INSERT into Decks ${sql(decks.map(({ mainboard, sideboard, ...e}) => ({
+        ...e,
+        mainboard: AsArray(mainboard),
+        sideboard: AsArray(sideboard),
+      })))}
+      ON CONFLICT DO NOTHING
+    `;
+
+    console.log(`--> ${decks.length} decks updated.`);
+  }
+
+  return transactionSuccess;
+}
 
 /**
  * Updates the Archetypes table with the latest archetype information.

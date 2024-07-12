@@ -5,7 +5,7 @@
 
 import express from 'express';
 
-import { UpdateArchetypes } from './database/jobs.js';
+import { UpdateDecks, UpdateArchetypes } from './database/jobs.js';
 import { GetPlayerArchetypes } from './mtggoldfish/archetypes.js';
 import { GetDecklists } from './mtgo/decklists.js';
 import { UseOptimizedDefaults } from './puppeteer/stealth.js';
@@ -36,6 +36,22 @@ app.get('/census/decklists', async (req, res) => {
   }
 
   res.json({ tournament_decklist_by_id_list: decklists });
+
+  // navigate to blank page
+  await page.goto('about:blank');
+});
+
+app.post('/events/update-decks', async (req, res) => {
+  try
+  {
+    const result = await UpdateDecks(page);
+    res.sendStatus(result ? 200 : 500);
+  }
+  catch (e)
+  {
+    console.error(e);
+    res.sendStatus(500);
+  }
 
   // navigate to blank page
   await page.goto('about:blank');

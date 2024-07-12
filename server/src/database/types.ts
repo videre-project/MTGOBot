@@ -33,3 +33,17 @@ export type Archetype = {
   archetype: string;
   archetype_id: number;
 };
+
+export type Deck = {
+  id: number;
+  event_id: number;
+  player: string;
+  mainboard: CardQuantityPair[];
+  sideboard: CardQuantityPair[];
+}
+
+export type CardQuantityPair = {
+  id: number;
+  name: string;
+  quantity: number;
+};
