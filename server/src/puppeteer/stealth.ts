@@ -7,14 +7,13 @@ import puppeteer from 'puppeteer-extra';
 import AdblockerPlugin from 'puppeteer-extra-plugin-adblocker';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
-
 /*
  * Launches a headless browser instance with optimized defaults.
  */
 export async function UseOptimizedDefaults(
   abort = ['image', 'font', 'stylesheet'],
   args: string[] = ['--no-sandbox'],
-  headless: boolean | "new" = "new",
+  headless: boolean | 'shell' = true,
 ) {
   puppeteer.use(AdblockerPlugin({ blockTrackers: true }));
   puppeteer.use(StealthPlugin());
