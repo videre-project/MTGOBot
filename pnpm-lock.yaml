@@ -6,7 +6,9 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  server:
     dependencies:
       dotenv:
         specifier: ^16.3.1
