@@ -75,7 +75,7 @@ export async function GetPlayerArchetypes(page: any, url: string) : Promise<IPla
   do
   {
     if (++i > 1) {
-      await page.waitForTimeout(100);
+      await new Promise(resolve => setTimeout(resolve, 100));
       await page.goto(url + `?page=${i}`, { waitUntil: 'domcontentloaded' });
     }
 
@@ -115,7 +115,7 @@ export async function GetPlayerArchetypes(page: any, url: string) : Promise<IPla
 
       // Navigate to the deck page from the deck id
       const deck_url = `https://www.mtggoldfish.com/deck/${id}`;
-      await page.waitForTimeout(100);
+      await new Promise(resolve => setTimeout(resolve, 100));
       await page.goto(deck_url, { waitUntil: 'domcontentloaded' });
 
       // Extract the archetype name from on the deck info's archetype uri

@@ -37,7 +37,7 @@ export async function GetEvents(
   let events: IEventList = [];
   do
   {
-    await page.waitForTimeout(100);
+    await new Promise(resolve => setTimeout(resolve, 100));
     await page.goto(`${url}&page=${++i}`, { waitUntil: 'domcontentloaded' });
 
     eventPage = await page.evaluate(() => {
@@ -82,7 +82,7 @@ export async function FilterEventList(
     const url = `https://www.mtggoldfish.com/tournament/${uid}`;
 
     // Get the source url MTGGoldfish sourced the event from.
-    await page.waitForTimeout(100);
+    await new Promise(resolve => setTimeout(resolve, 100));
     await page.goto(url, { waitUntil: 'domcontentloaded' });
 
     const match = await page.evaluate(() =>

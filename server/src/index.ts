@@ -86,6 +86,21 @@ app.post('/events/update-archetypes', async (req, res) => {
   await page.goto('about:blank');
 });
 
+app.get('/events/update-archetypes', async (req, res) => {
+  try
+  {
+    const result = await UpdateArchetypes(page);
+    res.sendStatus(result ? 200 : 500);
+  }
+  catch
+  {
+    res.sendStatus(500);
+  }
+
+  // navigate to blank page
+  await page.goto('about:blank');
+});
+
 const port = 3000;
 const server = app.listen(port, () => {
   console.clear();

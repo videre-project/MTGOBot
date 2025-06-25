@@ -48,8 +48,13 @@ public class BotClient : DLRWrapper<Client>, IDisposable
   /// The instance of the MTGO client handle.
   /// </summary>
   public Client Client { get; private set; }
+  
+  public bool PollIdle { get; set; }
 
-  public BotClient(bool restart = false, bool ignoreStatusCheck = false) : base(
+  public BotClient(
+      bool restart = false,
+      bool pollIdle = true,
+      bool ignoreStatusCheck = false) : base(
     factory: async () =>
     {
       // Wait until the main MTGO server is online.
@@ -83,12 +88,12 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       !restart && RemoteClient.HasStarted
         ? new ClientOptions()
         : new ClientOptions
-          {
-            CreateProcess = true,
-            StartMinimized = true,
-            DestroyOnExit = true,
-            AcceptEULAPrompt = true
-          }
+        {
+          CreateProcess = true,
+          StartMinimized = true,
+          DestroyOnExit = true,
+          AcceptEULAPrompt = true
+        }
     );
 
     // If not connected, attempt to log in.
@@ -101,9 +106,11 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       ).Wait();
     }
 
+    this.PollIdle = pollIdle;
+
     // Teardown the bot when the MTGO client disconnects.
     // This will trigger a restart of the client when using a runner.
-    Client.IsConnectedChanged += delegate(object? sender)
+    Client.IsConnectedChanged += delegate (object? sender)
     {
       Console.WriteLine("The MTGO client has been disconnected. Stopping...");
       Client.Dispose();
@@ -146,6 +153,8 @@ public class BotClient : DLRWrapper<Client>, IDisposable
           }
         }
       }
+      if (!PollIdle) break;
+
       // Clear any small object caches to prevent memory leaks on the client.
       Client.ClearCaches();
       await Task.Delay(TimeSpan.FromMinutes(5));

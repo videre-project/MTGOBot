@@ -26,6 +26,16 @@ public class Runner
   private static ConcurrentDictionary<string, Runner> RunnerThreads = new();
 
   /// <summary>
+  /// Event fired when a clean exit has been requested by the runner subprocess.
+  /// </summary>
+  public event Action? OnExitRequested;
+
+  /// <summary>
+  /// Indicates if a clean exit has been requested by the runner subprocess.
+  /// </summary>
+  public static volatile bool ExitRequested = false;
+
+  /// <summary>
   /// Starts the runner subprocess.
   /// </summary>
   public void Start()
@@ -49,7 +59,8 @@ public class Runner
       lambda = new Action(() =>
       {
         factory.Invoke();
-        Environment.Exit(0);
+        ExitRequested = true;
+        OnExitRequested?.Invoke();
       });
     }
     // Otherwise, start a new thread to manage the runner.
@@ -112,6 +123,9 @@ public class Runner
       bot.BeginOutputReadLine();
       bot.BeginErrorReadLine();
       bot.WaitForExit();
+
+      // If the exit code is 0, we can assume the bot exited cleanly.
+      if (bot.ExitCode == 0) break;
 
       // Handle early exit conditions to determine whether to restart the bot.
       if (MinRuntime != null)
