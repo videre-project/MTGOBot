@@ -1,5 +1,5 @@
 /** @file
-  Copyright (c) 2023, Cory Bennett. All rights reserved.
+  Copyright (c) 2025, Cory Bennett. All rights reserved.
   SPDX-License-Identifier: Apache-2.0
 **/
 
@@ -10,8 +10,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using MTGOSDK.API;
-using MTGOSDK.Core;
 using MTGOSDK.Core.Reflection;
+using MTGOSDK.Core.Remoting;
 using MTGOSDK.Core.Security;
 
 
@@ -63,7 +63,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       {
         try
         {
-          online = await ServerStatus.IsOnline();
+          online = await Client.IsOnline();
         }
         catch (Exception)
         {
@@ -91,7 +91,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         {
           CreateProcess = true,
           StartMinimized = true,
-          DestroyOnExit = true,
+          CloseOnExit = true,
           AcceptEULAPrompt = true
         }
     );

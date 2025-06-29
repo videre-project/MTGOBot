@@ -1,15 +1,11 @@
 /** @file
-  Copyright (c) 2023, Cory Bennett. All rights reserved.
+  Copyright (c) 2025, Cory Bennett. All rights reserved.
   SPDX-License-Identifier: Apache-2.0
 **/
-#pragma warning disable CS8602, CS8604
 
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 using MTGOSDK.API.Collection;
-
-using static Database.TypeMapperExtensions;
 
 
 namespace Database.Types;

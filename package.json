@@ -4,7 +4,7 @@
   "scripts": {
     "start:server": "pnpm run -r dev",
     "//start:bot": "dotnet run --project src/MTGOBot.csproj --no-build",
-    "start:bot": "pnpm exec src/bin/Debug/net8.0-windows/MTGOBot.exe",
+    "start:bot": "pnpm exec src/bin/Debug/net9.0-windows/MTGOBot.exe --ignore-status-check",
     "start": "pnpm run \"/^start:.*/\" --parallel"
   },
   "engines": {

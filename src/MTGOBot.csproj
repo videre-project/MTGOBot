@@ -2,34 +2,24 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>
 		<LangVersion>Latest</LangVersion>
     <Nullable>enable</Nullable>
-    <NoWarn>$(NoWarn);CS8601;CS8602;CS8604;CS8618</NoWarn>
+    <NoWarn>$(NoWarn);CS8602;CS8604</NoWarn>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Dapper"
-                      Version="2.1.24" />
+                      Version="2.1.66" />
     <PackageReference Include="Dapper.Contrib"
                       Version="2.0.78" />
     <PackageReference Include="Newtonsoft.Json"
                       Version="13.0.3" />
     <PackageReference Include="Npgsql"
-                      Version="8.0.1" />
-    <ProjectReference Include="..\lib\MTGOSDK\MTGOSDK\MTGOSDK.csproj" />
-  </ItemGroup>
-
-  <Import Project="..\lib\MTGOSDK\MTGOSDK.MSBuild\build\MTGOSDK.MSBuild.props" />
-  <PropertyGroup>
-    <MTGOSDK_Refs>$(_MTGOSDK_Refs)\3.4.*.*</MTGOSDK_Refs>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\lib\MTGOSDK\MTGOSDK.Ref\MTGOSDK.Ref.csproj"
-                      ReferenceOutputAssembly="false" />
-    <Reference Include="$(MTGOSDK_Refs)\MTGOEnumStruct.dll" />
-    <Reference Include="$(MTGOSDK_Refs)\WotC.MtGO.Client.Model.Reference.dll" />
+                      Version="8.0.7" />
+    <PackageReference Include="MTGOSDK"
+                      Version="0.8.2.20250513" />
   </ItemGroup>
 
 </Project>

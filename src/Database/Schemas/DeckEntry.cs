@@ -1,5 +1,5 @@
 /** @file
-  Copyright (c) 2023, Cory Bennett. All rights reserved.
+  Copyright (c) 2025, Cory Bennett. All rights reserved.
   SPDX-License-Identifier: Apache-2.0
 **/
 
@@ -15,7 +15,6 @@ using MTGOSDK.API.Play.Tournaments;
 using MTGOSDK.API.Users;
 
 using Database.Types;
-using static Database.TypeMapperExtensions;
 
 
 namespace Database.Schemas;

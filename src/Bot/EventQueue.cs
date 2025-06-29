@@ -1,5 +1,5 @@
 /** @file
-  Copyright (c) 2023, Cory Bennett. All rights reserved.
+  Copyright (c) 2025, Cory Bennett. All rights reserved.
   SPDX-License-Identifier: Apache-2.0
 **/
 
@@ -7,15 +7,12 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 using MTGOSDK.API.Play;
 using MTGOSDK.API.Play.Tournaments;
 using MTGOSDK.Core.Reflection;
 using static MTGOSDK.API.Events;
-
-using WotC.MtGO.Client.Model.Play.Tournaments;
 
 using Database;
 using Database.Schemas;
@@ -115,11 +112,6 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
   /// </summary>
   public async Task InitializeQueue()
   {
-    // Add a callback to add the event to the queue when new events are created.
-    EventManager.PlayerEventsCreated += new EventCallback<
-      PlayerEventsCreatedEventArgs
-    >(async (e) => await AddEventsToQueue(e.Events));
-
     // Enqueue or schedule all events that are already in the system.
     await AddEventsToQueue(EventManager.Events);
   }
@@ -139,7 +131,7 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
       try
       {
         // Wait until the event is available in the EventManager.
-        var tournament = await TryUntil(() => EventManager.GetEvent(item.Id));
+        var tournament = Retry(() => EventManager.GetEvent(item.Id), raise: true);
         // Build the composite event entry to add to the database.
         var composite = item.entry ?? new EventComposite(tournament as Tournament);
         Console.WriteLine($"--> Got event entry for {tournament} ({(DateTime.Now - start).TotalSeconds} s).");
