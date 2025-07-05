@@ -19,7 +19,7 @@
     <PackageReference Include="Npgsql"
                       Version="8.0.7" />
     <PackageReference Include="MTGOSDK"
-                      Version="0.8.2.20250513" />
+                      Version="0.8.3.20250705-preview.8" />
   </ItemGroup>
 
 </Project>

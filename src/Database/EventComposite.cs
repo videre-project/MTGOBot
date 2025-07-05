@@ -18,19 +18,30 @@ namespace Database;
 
 public struct EventComposite(Tournament tournament)
 {
-  public EventEntry                 @event    = new EventEntry(tournament);
-  public ICollection<PlayerEntry>   players   = PlayerEntry.FromEvent(tournament);
-  public ICollection<StandingEntry> standings = StandingEntry.FromEvent(tournament);
-  public ICollection<MatchEntry>    matches   => standings.SelectMany(s => s.Matches).ToList();
-  // public ICollection<DeckEntry>     decklists = DeckEntry.FromEvent(tournament).Result;
-  // public ICollection<DeckEntry>     decklists = default;
-  public ICollection<DeckEntry>     decklists =
-    // FIXME: Preliminary events are not yet published.
-    EventEntry.GetEventType(tournament) != EventType.Preliminary
-      ? DeckEntry.FromEvent(tournament).Result
-      : new List<DeckEntry>();
+  private Tournament m_tournament = tournament;
 
-  public string DisplayName => tournament.ToString();
+  public EventEntry                 @event;
+  public ICollection<PlayerEntry>   players   = new List<PlayerEntry>();
+  public ICollection<StandingEntry> standings =  new List<StandingEntry>();
+  public ICollection<MatchEntry>    matches   => standings.SelectMany(s => s.Matches).ToList();
+  public ICollection<DeckEntry>     decklists =  new List<DeckEntry>();
+
+  public string DisplayName => m_tournament.ToString();
+
+  public void BuildCollection(Tournament? tournament = null)
+  {
+    if (tournament == null) tournament = m_tournament;
+
+    this.@event = new EventEntry(tournament);
+    this.players = PlayerEntry.FromEvent(tournament, this.players);
+    this.standings = StandingEntry.FromEvent(tournament, this.standings);
+
+    // Get decklists from local server (proxies the Daybreak census API)
+    this.decklists =
+      EventEntry.GetEventType(tournament) != EventType.Preliminary
+        ? DeckEntry.FromEvent(tournament).Result
+        : new List<DeckEntry>();
+  }
 
   public EventComposite(int eventId)
       : this(EventManager.GetEvent(eventId) as Tournament

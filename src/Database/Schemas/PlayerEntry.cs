@@ -4,7 +4,7 @@
 **/
 
 using System.Collections.Generic;
-using System.Threading;
+using System.Linq;
 
 using MTGOSDK.API.Play.Tournaments;
 using MTGOSDK.API.Users;
@@ -23,13 +23,18 @@ public struct PlayerEntry
     this.Name = player.Name;
   }
 
-  public static ICollection<PlayerEntry> FromEvent(Tournament tournament)
+  public static ICollection<PlayerEntry> FromEvent(
+    Tournament tournament,
+    ICollection<PlayerEntry>? existing = null)
   {
-    var players = new List<PlayerEntry>();
+    ICollection<PlayerEntry> players = existing ?? [];
     foreach (var player in tournament.Players)
     {
+      // Skip any duplicate players
+      if (players.Any(p => p.Id != -1 && p.Id == player.Id))
+        continue;
+
       players.Add(new PlayerEntry(player));
-      Thread.Sleep(250);
     }
     return players;
   }

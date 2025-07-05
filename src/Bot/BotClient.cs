@@ -10,6 +10,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using MTGOSDK.API;
+using MTGOSDK.Core.Exceptions;
+using MTGOSDK.Core.Memory;
 using MTGOSDK.Core.Reflection;
 using MTGOSDK.Core.Remoting;
 using MTGOSDK.Core.Security;
@@ -82,6 +84,36 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       }
     })
   {
+    DotEnv.LoadFile();
+    StartClient();
+
+    this.PollIdle = pollIdle;
+  }
+
+  public void StartClient(bool restart = false)
+  {
+    bool isColdStart = true;
+    if (this.Client != null)
+    {
+      isColdStart = false;
+      restart = true;
+
+      // Clear any connection events
+      Client.IsConnectedChanged.Clear();
+      Client.Dispose();
+
+      Console.WriteLine("Restarting MTGO client...");
+      Task.Run(async delegate
+      {
+        if (!await WaitUntil(() => !RemoteClient.KillProcess(), 10))
+        {
+          throw new SetupFailureException("Unable to restart MTGO.");
+        }
+
+        await RemoteClient.StartProcess();
+      }).Wait();
+    }
+
     // Initialize the client instance.
     Console.WriteLine($"Connecting to MTGO v{Client.Version}...");
     this.Client = new Client(
@@ -92,12 +124,11 @@ public class BotClient : DLRWrapper<Client>, IDisposable
           CreateProcess = true,
           StartMinimized = true,
           CloseOnExit = true,
-          AcceptEULAPrompt = true
+          AcceptEULAPrompt = isColdStart
         }
     );
 
     // If not connected, attempt to log in.
-    DotEnv.LoadFile();
     if (!Client.IsConnected)
     {
       Client.LogOn(
@@ -105,8 +136,6 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         password: DotEnv.Get("PASSWORD")
       ).Wait();
     }
-
-    this.PollIdle = pollIdle;
 
     // Teardown the bot when the MTGO client disconnects.
     // This will trigger a restart of the client when using a runner.
@@ -123,11 +152,15 @@ public class BotClient : DLRWrapper<Client>, IDisposable
   /// </summary>
   public async Task StartEventQueue()
   {
-    var queue = new EventQueue();
     // Start loop that waits every 5 minutes before starting the next batch.
+    var queue = new EventQueue();
     while (DateTime.UtcNow < ResetTime)
     {
-      if (await queue.ProcessQueue() || Uptime < TimeSpan.FromMinutes(5))
+      // Suppress GC events while the event queue is running.
+      using var gcCtx = GCTimer.SuppressGC();
+
+      // Process the event queue. This will return true if there are events
+      if (await queue.ProcessQueue(this) || Uptime < TimeSpan.FromMinutes(5))
       {
         //
         // Check every 10 minutes until archetypes are updated for all processed
@@ -139,7 +172,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         //
         using (var client = new HttpClient()
         {
-          BaseAddress = new Uri("http://localhost:3000"),
+          BaseAddress = new Uri("http://localhost:3001"),
           Timeout = TimeSpan.FromMinutes(5)
         })
         {

@@ -14,8 +14,7 @@ using Bot;
 // --ignore-status-check: Ignores the status check when starting the bot, useful for
 //
 bool norestart = false;
-bool pollIdle = false;
-bool ignoreStatusCheck = false;
+bool pollIdle = true;
 foreach (var arg in Environment.GetCommandLineArgs())
 {
   if (arg.Equals("--norestart", StringComparison.OrdinalIgnoreCase))
@@ -28,18 +27,13 @@ foreach (var arg in Environment.GetCommandLineArgs())
     pollIdle = true;
     break;
   }
-  if (arg.Equals("--ignore-status-check", StringComparison.OrdinalIgnoreCase))
-  {
-    ignoreStatusCheck = true;
-    break;
-  }
 }
 
 // Starts the MTGO Bot in a new subprocess.
 var bot = new Runner("BotClient", async () =>
 {
   // Main entry point for the MTGO Bot.
-  using (var client = new BotClient(!norestart, pollIdle, ignoreStatusCheck))
+  using (var client = new BotClient(!norestart, pollIdle))
   {
     Console.WriteLine("Finished loading.");
     await client.StartEventQueue();

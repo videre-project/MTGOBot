@@ -3,6 +3,7 @@
   SPDX-License-Identifier: Apache-2.0
 **/
 
+using System;
 using Newtonsoft.Json.Linq;
 
 using MTGOSDK.API.Collection;
@@ -18,9 +19,12 @@ public struct CardQuantityPair
 
   public CardQuantityPair(JToken json)
   {
-    this.Id       = json["docid"].ToObject<int>();
-    this.Name     = CollectionManager.GetCard(this.Id).Name;
+    this.Id = json["docid"].ToObject<int>();
     this.Quantity = json["qty"].ToObject<int>();
+
+    this.Name = CollectionManager.GetCard(this.Id).Name;
+    if (string.IsNullOrEmpty(this.Name))
+      throw new ArgumentException($"Card with ID {this.Id} has no name.");
   }
 
   public override string ToString() =>

@@ -76,7 +76,7 @@ public struct DeckEntry
       string name = tournament.Description;
       int eventId = tournament.Id;
       string date = tournament.StartTime.ToString("yyyy-MM-dd");
-      string url = $"http://localhost:3000/census/decklists?name={name}&id={eventId}&date={date}";
+      string url = $"http://localhost:3001/census/decklists?name={name}&id={eventId}&date={date}";
       using var response = await client.GetAsync(url);
 
       if (!response.IsSuccessStatusCode)
@@ -95,7 +95,7 @@ public struct DeckEntry
         var user = new User(playerId, deck["player"].ToObject<string>());
         var deckEntry = new DeckEntry(eventId, user, deck);
         decks.Add(deckEntry);
-        Thread.Sleep(250);
+        // Thread.Sleep(250);
       }
     }
 

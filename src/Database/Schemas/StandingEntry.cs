@@ -4,11 +4,11 @@
 **/
 
 using System;
-using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 
 using MTGOSDK.API.Play.Tournaments;
+using static MTGOSDK.Core.Reflection.DLRWrapper;
 
 using Database.Types;
 
@@ -54,13 +54,17 @@ public struct StandingEntry
   /// <returns>A list of MatchEntry records.</returns>
   private static IList<MatchEntry> GetMatches(int eventId, StandingRecord standing)
   {
-    IList<MatchEntry> matches = new List<MatchEntry>();
-    foreach(var match in standing.PreviousMatches)
+    return Retry(() =>
     {
-      matches.Add(new MatchEntry(eventId, match, standing.Player));
-      Thread.Sleep(250);
-    }
-    return matches;
+      IList<MatchEntry> matches = new List<MatchEntry>();
+      foreach (var match in standing.PreviousMatches)
+      {
+        var matchEntry = Retry(() => new MatchEntry(eventId, match, standing.Player),
+            retries: 5, raise: true);
+        matches.Add(matchEntry);
+      }
+      return matches;
+    }, retries: 5, raise: true)!;
   }
 
   /// <summary>
@@ -72,21 +76,137 @@ public struct StandingEntry
         matches.Count(m => m.Result == ResultType.loss),
         matches.Count(m => m.Result == ResultType.draw));
 
+  // New: override Equals and GetHashCode for collection comparison
+  public override bool Equals(object? obj)
+  {
+    if (obj is not StandingEntry other) return false;
+    return EventId == other.EventId && Player == other.Player && Rank == other.Rank;
+  }
+  public override int GetHashCode() => HashCode.Combine(EventId, Player, Rank);
+
   /// <summary>
-  /// Extracts standing records from a Tournament.
+  /// Extracts standing records from a Tournament, optionally resuming from an existing collection.
   /// </summary>
   /// <param name="tournament">The Tournament instance to extract standings from.</param>
+  /// <param name="existing">Optional: already-processed standings to persist state.</param>
   /// <returns>A collection of StandingEntry records.</returns>
-  public static ICollection<StandingEntry> FromEvent(Tournament tournament)
+  public static ICollection<StandingEntry> FromEvent(
+    Tournament tournament,
+    ICollection<StandingEntry>? existing = null)
   {
     int eventId = tournament.Id;
-    ICollection<StandingEntry> standings = new List<StandingEntry>();
-    foreach(var standing in tournament.Standings)
+    ICollection<StandingEntry> standings = existing ?? [];
+
+    int count = tournament.Standings.Count;
+    foreach (var standing in tournament.Standings)
     {
-      standings.Add(new StandingEntry(eventId, standing));
+      // Skip any standings that has already been processed
+      if (standings.Any(s => s.Rank == standing.Rank))
+        continue;
+
+      DateTime startTime = DateTime.Now;
+      var standingEntry = Retry(() => new StandingEntry(eventId, standing),
+          retries: 5, raise: true);
+      standings.Add(standingEntry);
+      Console.WriteLine($"--> Processed standing {standings.Count} of {count}. ({DateTime.Now - startTime})");
+
+      // If it took longer than 5 minutes, throw a timeout exception
+      if (DateTime.Now - startTime > TimeSpan.FromMinutes(5))
+        throw new TimeoutException("Processing standings took too long.");
     }
 
+    // Verify standings after processing
+    ValidateStandings(standings);
+  
     return standings;
+  }
+
+  public static void ValidateStandings(ICollection<StandingEntry> standings)
+  {
+    if (standings.Count == 0)
+      throw new InvalidOperationException("No standings found to verify.");
+
+
+    // Verify that all standings have unique ranks
+    var ranks = standings.Select(s => s.Rank).Distinct().ToList();
+    if (ranks.Count != standings.Count)
+      throw new InvalidOperationException("Duplicate ranks found in standings.");
+
+    // Verify that all players are unique
+    var players = standings.Select(s => s.Player).Distinct().ToList();
+    if (players.Count != standings.Count)
+      throw new InvalidOperationException("Duplicate players found in standings.");
+
+    // Do the points match the number of matches won?
+    // 3 points for a win, 1 point for a draw, 0 points for a loss
+    foreach (var standing in standings)
+    {
+      int wins = standing.Matches.Count(m => m.Result == ResultType.win);
+      int draws = standing.Matches.Count(m => m.Result == ResultType.draw);
+      int expectedPoints = (wins * 3) + draws;
+
+      if (standing.Points != expectedPoints)
+        throw new InvalidOperationException(
+          $"Points mismatch for {standing.Player}: expected {expectedPoints}, got {standing.Points}.");
+    }
+
+    // For matches without a bye, we should have at least one game.
+    //
+    // A good way to check how many should be to cross-reference the game games
+    // from the two players' who were paired against each other that round.
+    //
+    // We'll create a dictionary of player names to their matches to simplify
+    // the lookup.
+    var playerMatches = standings
+      .SelectMany(s => s.Matches)
+      .GroupBy(m => m.Player)
+      .ToDictionary(g => g.Key, g => g.ToList());
+
+    // Group matches by Id and verify that results are consistent for both.
+    var matchGroups = standings
+      .SelectMany(s => s.Matches)
+      .GroupBy(m => m.Id)
+      .ToList();
+
+    foreach (var group in matchGroups)
+    {
+      // There should be only one entry if the match is a bye.
+      if (group.Count() == 1 || group.Key == -1)
+      {
+        var match = group.First();
+        if (match.IsBye)
+          continue; // Bye matches are valid with no games.
+        else if (group.Key == -1)
+          throw new InvalidOperationException(
+            $"Round {match.Round} for {match.Player} has an invalid match ID (-1).");
+
+        // If it's not a bye, we should have at least one game.
+        if (match.Games.Length == 0)
+          throw new InvalidOperationException(
+            $"Match {match.Id} for {match.Player} has no games recorded.");
+      }
+      else if (group.Count() > 2)
+      {
+        throw new InvalidOperationException(
+          $"Match {group.Key} has more than two entries: {group.Count()} found.");
+      }
+
+      // Make sure the game results are consistent between both players.
+      // That means a win for one player should be a loss for the other,
+      // and a draw should be consistent for both.
+      var firstMatch = group.First();
+      var secondMatch = group.Skip(1).FirstOrDefault();
+      if (!secondMatch.Equals(default(MatchEntry)))
+      {
+        if (firstMatch.Result == ResultType.win && secondMatch.Result != ResultType.loss ||
+            firstMatch.Result == ResultType.loss && secondMatch.Result != ResultType.win ||
+            firstMatch.Result == ResultType.draw && secondMatch.Result != ResultType.draw)
+        {
+          throw new InvalidOperationException(
+            $"Inconsistent results for match {firstMatch.Id} between {firstMatch.Player} and {secondMatch.Player}.");
+        }
+      }
+    }
   }
 
   public override string ToString() =>

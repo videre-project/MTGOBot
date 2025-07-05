@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start:server": "pnpm run -r dev",
-    "//start:bot": "dotnet run --project src/MTGOBot.csproj --no-build",
-    "start:bot": "pnpm exec src/bin/Debug/net9.0-windows/MTGOBot.exe --ignore-status-check",
+    "start:bot": "dotnet run --project src",
     "start": "pnpm run \"/^start:.*/\" --parallel"
   },
   "engines": {

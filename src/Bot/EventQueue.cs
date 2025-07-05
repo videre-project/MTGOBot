@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using MTGOSDK.API.Play;
 using MTGOSDK.API.Play.Tournaments;
 using MTGOSDK.Core.Reflection;
-using static MTGOSDK.API.Events;
 
 using Database;
 using Database.Schemas;
@@ -20,16 +19,16 @@ using Database.Schemas;
 
 namespace Bot;
 
-public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
+public class EventQueue : DLRWrapper
 {
   /// <summary>
   /// Represents a queued event to be added to the database.
   /// </summary>
-  public struct QueueItem(dynamic @event, int retries = 3)
+  public class QueueItem(dynamic @event)
   {
-    public int Id => @event.Id;
-    public string Name => @event.ToString();
-    public int Retries = retries;
+    public int Id = @event.Id;
+    public string Name = @event.ToString();
+    public dynamic Event = @event;
     public EventComposite? entry = null;
   }
 
@@ -119,44 +118,79 @@ public class EventQueue : DLRWrapper<ConcurrentQueue<Tournament>>
   /// <summary>
   /// Blocks the current thread and processes the event queue when updated.
   /// </summary>
-  public async Task<bool> ProcessQueue()
+  public async Task<bool> ProcessQueue(BotClient client)
   {
     bool hasUpdated = false;
-    while (Queue.TryDequeue(out QueueItem item))
+    while (Queue.TryDequeue(out QueueItem? item))
     {
+      EventComposite composite = default;
       Console.WriteLine($"\nProcessing event '{item.Name}' ...");
 
-      // Get the initial time
-      var start = DateTime.Now;
+      int retries = 0;
+      int maxRetries = 5;
+      do
+      {
+        try
+        {
+          // Wait until the event is available in the EventManager.
+          var start = DateTime.Now;
+          if (Unbind(item.Event) == null || retries > 0)
+          {
+            item.Event = Retry(() => EventManager.GetEvent(item.Id), raise: true)!;
+            if (item.Event == null)
+            {
+              Console.WriteLine($"--> Event '{item.Name}' is not available, skipping...");
+              continue;
+            }
+          }
+          var tournament = item.Event as Tournament;
+
+          if (item.entry.HasValue)
+          {
+            Console.WriteLine($"--> Reusing existing event entry for {tournament}.");
+            composite = item.entry.Value;
+            composite.BuildCollection(tournament);
+          }
+          else
+          {
+            composite = new EventComposite(tournament);
+            item.entry = composite;
+            item.entry.Value.BuildCollection();
+          }
+
+          Console.WriteLine($"--> Got event entry for {item.Name} ({(DateTime.Now - start).TotalSeconds} s).");
+          break;
+        }
+        catch (Exception e)
+        {
+          Console.WriteLine($"--> Failed to build event entry for {item.Name}: {e.Message}");
+
+          //
+          // As errors may have occured due to a corrupted enumerator state,
+          // we must restart the client to ensure the event can be processed
+          // without causing any processing issues for future entries.
+          //
+          Retry(() => client.StartClient(restart: true), delay: 1000, raise: true);
+        }
+      }
+      while (retries++ < maxRetries);
+      if (composite.Equals(default)) continue;
+
       try
       {
-        // Wait until the event is available in the EventManager.
-        var tournament = Retry(() => EventManager.GetEvent(item.Id), raise: true);
-        // Build the composite event entry to add to the database.
-        var composite = item.entry ?? new EventComposite(tournament as Tournament);
-        Console.WriteLine($"--> Got event entry for {tournament} ({(DateTime.Now - start).TotalSeconds} s).");
-        item.entry ??= composite;
         // Add the event to the database.
+        var start = DateTime.Now;
         await EventRepository.AddEvent(composite);
-        Console.WriteLine($"--> Added event '{tournament}' to the database ({(DateTime.Now - start).TotalSeconds} s).");
+        Console.WriteLine($"--> Added event '{item.Name}' to the database ({(DateTime.Now - start).TotalSeconds} s).");
         hasUpdated |= true;
       }
       catch (Exception e)
       {
-        Console.WriteLine($"Failed to process event '{item.Name}': {e.ToString()}");
-
-        // If the exception has an inner exception, print it.
+        Console.WriteLine($"--> Failed to add event '{item.Name}' to the database: {e.Message}");
         if (e.InnerException != null)
         {
-          Console.WriteLine($"--> Inner Exception: {e.InnerException.ToString()}");
+          Console.WriteLine($"    Inner exception: {e.InnerException.Message}");
         }
-
-        if (item.Retries-- <= 0)
-        {
-          Console.WriteLine($"Event '{item.Name}' has exceeded the maximum number of retries, skipping...");
-          continue;
-        }
-        Queue.Enqueue(item);
       }
     }
 

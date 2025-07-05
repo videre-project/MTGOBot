@@ -101,7 +101,7 @@ app.get('/events/update-archetypes', async (req, res) => {
   await page.goto('about:blank');
 });
 
-const port = 3000;
+const port = 3001;
 const server = app.listen(port, () => {
   console.clear();
   console.log(`Listening on port ${port}`);

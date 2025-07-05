@@ -5,10 +5,10 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 
 using MTGOSDK.API.Play.Tournaments;
 using MTGOSDK.API.Users;
+using static MTGOSDK.Core.Reflection.DLRWrapper;
 
 using Database.Types;
 
@@ -65,10 +65,11 @@ public struct MatchEntry
   private static GameResult[] GetGames(MatchStandingRecord match, User player)
   {
     var games = new List<GameResult>();
-    foreach(var game in match.GameStandingRecords)
+    foreach (var game in match.GameStandingRecords)
     {
-      games.Add(new GameResult(game, player));
-      Thread.Sleep(250);
+      var gameResult = Retry(() => new GameResult(game, player),
+          retries: 5, raise: true);
+      games.Add(gameResult);
     }
     return games.ToArray();
   }
