@@ -85,6 +85,8 @@ public class BotClient : DLRWrapper<Client>, IDisposable
     })
   {
     DotEnv.LoadFile();
+
+    this.Client = null!;
     StartClient();
 
     this.PollIdle = pollIdle;

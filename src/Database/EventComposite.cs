@@ -16,9 +16,9 @@ using Database.Types;
 
 namespace Database;
 
-public struct EventComposite(Tournament tournament)
+public struct EventComposite
 {
-  private Tournament m_tournament = tournament;
+  private Tournament m_tournament = null!;
 
   public EventEntry                 @event;
   public ICollection<PlayerEntry>   players   = new List<PlayerEntry>();
@@ -27,6 +27,11 @@ public struct EventComposite(Tournament tournament)
   public ICollection<DeckEntry>     decklists =  new List<DeckEntry>();
 
   public string DisplayName => m_tournament.ToString();
+
+  public EventComposite(Tournament tournament)
+  {
+    this.m_tournament = tournament;
+  }
 
   public void BuildCollection(Tournament? tournament = null)
   {
@@ -50,7 +55,7 @@ public struct EventComposite(Tournament tournament)
 
   public override string ToString() =>
     string.Join("\n", new string[] {
-      tournament.ToString(),
+      m_tournament.ToString(),
       $"  Players:   {players.Count}",
       $"  Standings: {standings.Count}",
       $"  Matches:   {matches.Count}",
