@@ -31,6 +31,13 @@ public struct EventEntry
     this.Kind    = GetEventType(tournament);
     this.Rounds  = tournament.TotalRounds;
     this.Players = tournament.TotalPlayers;
+
+    // Validate that we have reasonable values
+    if (this.Id == 0 || this.Players == 0)
+    {
+      throw new ArgumentException(
+        $"Tournament {tournament.Id} has invalid data: Id={this.Id}, Players={this.Players}, Name={this.Name}");
+    }
   }
 
   /// <summary>
@@ -69,7 +76,7 @@ public struct EventEntry
 
   public override string ToString() =>
     string.Format(
-      "({0}, '{1}', '{2}', '{3}', '{4}', {5}, {6})",
-      Id, Name.Escape(), Date, Format, Kind, Rounds, Players
+      "({0}, {1}, '{2}', '{3}', '{4}', {5}, {6})",
+      Id, Name?.Escape() != null ? $"'{Name.Escape()}'" : "NULL", Date, Format, Kind, Rounds, Players
     );
 }

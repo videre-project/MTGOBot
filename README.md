@@ -8,7 +8,7 @@ MTGOBot is an automated event data collection bot for Magic: The Gathering Onlin
 
 ## Requirements
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Node.js](https://nodejs.org/) (v18 or newer)
 - [pnpm](https://pnpm.io/) (v3 or newer)
 

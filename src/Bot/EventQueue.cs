@@ -113,6 +113,7 @@ public class EventQueue : DLRWrapper
   {
     // Enqueue or schedule all events that are already in the system.
     await AddEventsToQueue(EventManager.Events);
+    Console.WriteLine($"Initialized event queue with {Queue.Count} events.");
   }
 
   /// <summary>
@@ -154,8 +155,8 @@ public class EventQueue : DLRWrapper
           else
           {
             composite = new EventComposite(tournament);
+            composite.BuildCollection();
             item.entry = composite;
-            item.entry.Value.BuildCollection();
           }
 
           Console.WriteLine($"--> Got event entry for {item.Name} ({(DateTime.Now - start).TotalSeconds} s).");
@@ -187,6 +188,7 @@ public class EventQueue : DLRWrapper
       catch (Exception e)
       {
         Console.WriteLine($"--> Failed to add event '{item.Name}' to the database: {e.Message}");
+        Console.WriteLine(e.StackTrace);
         if (e.InnerException != null)
         {
           Console.WriteLine($"    Inner exception: {e.InnerException.Message}");

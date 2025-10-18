@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
 		<LangVersion>Latest</LangVersion>
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);CS8602;CS8604</NoWarn>
@@ -15,11 +15,11 @@
     <PackageReference Include="Dapper.Contrib"
                       Version="2.0.78" />
     <PackageReference Include="Newtonsoft.Json"
-                      Version="13.0.3" />
+                      Version="13.0.4" />
     <PackageReference Include="Npgsql"
-                      Version="8.0.7" />
+                      Version="10.0.0-rc.1" />
     <PackageReference Include="MTGOSDK"
-                      Version="0.8.3.20250705-preview.8" />
+                      Version="0.8.6.20251008-preview.10" />
   </ItemGroup>
 
 </Project>

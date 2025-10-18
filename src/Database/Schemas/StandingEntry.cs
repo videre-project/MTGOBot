@@ -105,8 +105,7 @@ public struct StandingEntry
         continue;
 
       DateTime startTime = DateTime.Now;
-      var standingEntry = Retry(() => new StandingEntry(eventId, standing),
-          retries: 5, raise: true);
+      var standingEntry = new StandingEntry(eventId, standing);
       standings.Add(standingEntry);
       Console.WriteLine($"--> Processed standing {standings.Count} of {count}. ({DateTime.Now - startTime})");
 
@@ -125,7 +124,6 @@ public struct StandingEntry
   {
     if (standings.Count == 0)
       throw new InvalidOperationException("No standings found to verify.");
-
 
     // Verify that all standings have unique ranks
     var ranks = standings.Select(s => s.Rank).Distinct().ToList();

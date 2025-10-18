@@ -4,7 +4,8 @@
   "scripts": {
     "start:server": "pnpm run -r dev",
     "start:bot": "dotnet run --project src",
-    "start": "pnpm run \"/^start:.*/\" --parallel"
+    "start": "pnpm run \"/^start:.*/\" --parallel",
+    "dev": "pnpm start"
   },
   "engines": {
     "node": ">= 18",
