@@ -20,12 +20,10 @@ foreach (var arg in Environment.GetCommandLineArgs())
   if (arg.Equals("--norestart", StringComparison.OrdinalIgnoreCase))
   {
     norestart = true;
-    break;
   }
   if (arg.Equals("--pollidle", StringComparison.OrdinalIgnoreCase))
   {
     pollIdle = true;
-    break;
   }
 }
 
@@ -37,6 +35,12 @@ var bot = new Runner("BotClient", async () =>
   {
     Console.WriteLine("Finished loading.");
     await client.StartEventQueue();
+  }
+  
+  // If norestart is set, exit with code 99 to signal clean shutdown
+  if (norestart)
+  {
+    Environment.Exit(99);
   }
 });
 bot.Start();

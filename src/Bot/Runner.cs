@@ -124,9 +124,10 @@ public class Runner
       bot.BeginErrorReadLine();
       bot.WaitForExit();
 
-      // If the exit code is 0, we can assume the bot exited cleanly.
-      if (bot.ExitCode == 0) break;
+      // If the exit code is 99, this is an intentional clean shutdown.
+      if (bot.ExitCode == 99) break;
 
+      // For exit code 0 (normal/reset) or any error code, evaluate restart logic
       // Handle early exit conditions to determine whether to restart the bot.
       if (MinRuntime != null)
         exitEarly = bot.ExitTime.Subtract(bot.StartTime) < MinRuntime;

@@ -43,7 +43,10 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       times[i] = resetTime + (interval * i);
     }
 
-    return times.FirstOrDefault(t => t > DateTime.UtcNow);
+    var nextReset = times.FirstOrDefault(t => t > DateTime.UtcNow);
+    return nextReset != default(DateTime) 
+        ? nextReset 
+        : times.First() + TimeSpan.FromDays(1);
   }
 
   /// <summary>
@@ -155,13 +158,13 @@ public class BotClient : DLRWrapper<Client>, IDisposable
   public async Task StartEventQueue()
   {
     // Start loop that waits every 5 minutes before starting the next batch.
-    var queue = new EventQueue();
     while (DateTime.UtcNow < ResetTime)
     {
       // Suppress GC events while the event queue is running.
       using var gcCtx = GCTimer.SuppressGC();
 
       // Process the event queue. This will return true if there are events
+      var queue = new EventQueue();
       if (await queue.ProcessQueue(this) || Uptime < TimeSpan.FromMinutes(5))
       {
         //
@@ -192,7 +195,18 @@ public class BotClient : DLRWrapper<Client>, IDisposable
 
       // Clear any small object caches to prevent memory leaks on the client.
       Client.ClearCaches();
+
+      gcCtx.Dispose();
+      GC.Collect();
+      GC.WaitForPendingFinalizers();
+
       await Task.Delay(TimeSpan.FromMinutes(5));
+    }
+
+    // If we exited because reset time was reached, exit cleanly for restart
+    if (DateTime.UtcNow >= ResetTime)
+    {
+      Console.WriteLine("Reset time reached. Restarting bot...");
     }
   }
 
