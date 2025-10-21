@@ -24,6 +24,10 @@ export async function UseOptimizedDefaults(
     // Disable timeout for all puppeteer operations
     protocolTimeout: 0,
     timeout: 0,
+    // Ensure Chrome exits when the parent process exits
+    handleSIGINT: false,
+    handleSIGTERM: false,
+    handleSIGHUP: false,
   });
 
   const page = await browser.pages().then((pages) => pages[0]);

@@ -113,10 +113,36 @@ const server = app.listen(port, () => {
 //   next(err);
 // });
 
-process.on('SIGTERM', () => {
+// Graceful shutdown handler
+async function shutdown(signal: string) {
+  console.log(`\n${signal} received, shutting down gracefully...`);
+  
   server.close(async () => {
-    // Close the browser
-    await page.close();
-    await browser.close();
+    console.log('HTTP server closed');
+    
+    try {
+      // Close the browser
+      await page.close();
+      console.log('Page closed');
+      await browser.close();
+      console.log('Browser closed');
+      process.exit(0);
+    } catch (error) {
+      console.error('Error during shutdown:', error);
+      process.exit(1);
+    }
   });
-})
+
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+}
+
+// Handle various exit signals
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('beforeExit', () => {
+  browser.close().catch(console.error);
+});
