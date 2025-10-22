@@ -114,7 +114,16 @@ const server = app.listen(port, () => {
 // });
 
 // Graceful shutdown handler
+let isShuttingDown = false;
+
 async function shutdown(signal: string) {
+  // Prevent multiple shutdown attempts
+  if (isShuttingDown) {
+    console.log(`${signal} received, but shutdown already in progress...`);
+    return;
+  }
+  isShuttingDown = true;
+
   console.log(`\n${signal} received, shutting down gracefully...`);
   
   server.close(async () => {
@@ -144,5 +153,7 @@ async function shutdown(signal: string) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('beforeExit', () => {
-  browser.close().catch(console.error);
+  if (!isShuttingDown) {
+    browser.close().catch(console.error);
+  }
 });
