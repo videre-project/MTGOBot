@@ -207,8 +207,17 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       {
         var nextEvent = queue.UpcomingQueue.MinBy(e => e.EndTime);
 
+        // If the next event has already ended, skip the wait and retry immediately
+        if (nextEvent.EndTime <= DateTime.UtcNow)
+        {
+          Console.WriteLine(
+            $"Next event already ended at {nextEvent.EndTime.ToLocalTime()}, " +
+            $"retrying immediately..."
+          );
+          await Task.Delay(TimeSpan.FromSeconds(1));
+        }
         // If the next event ends before reset time, wait until then.
-        if (nextEvent.EndTime < ResetTime)
+        else if (nextEvent.EndTime < ResetTime)
         {
           var waitTime = nextEvent.EndTime - DateTime.UtcNow;
           Console.WriteLine(
