@@ -34,6 +34,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
 
   private static DateTime GetResetTime(int numResets = 12)
   {
+    // By default, we reset at 1:30 AM UTC and every 2 hours thereafter.
     var resetTime = DateTime.UtcNow.Date.AddHours(1).AddMinutes(30);
 
     TimeSpan interval = (resetTime.AddDays(1) - resetTime) / numResets;
@@ -200,7 +201,47 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       GC.Collect();
       GC.WaitForPendingFinalizers();
 
-      await Task.Delay(TimeSpan.FromMinutes(5));
+      // We've processed all finished events but there are upcoming events still.
+      // Here, we'll wait until the next event ends or reset time is reached.
+      if (queue.Queue.IsEmpty && !queue.UpcomingQueue.IsEmpty)
+      {
+        var nextEvent = queue.UpcomingQueue.MinBy(e => e.EndTime);
+
+        // If the next event ends before reset time, wait until then.
+        if (nextEvent.EndTime < ResetTime)
+        {
+          var waitTime = nextEvent.EndTime - DateTime.UtcNow;
+          Console.WriteLine(
+            $"Waiting until next event ends at {nextEvent.EndTime.ToLocalTime()} " +
+            $"({waitTime.TotalMinutes:F1} minutes)..."
+          );
+          await Task.Delay(waitTime);
+        }
+        else
+        {
+          var waitTime = ResetTime - DateTime.UtcNow;
+          Console.WriteLine(
+            $"Next event ends after reset time at {nextEvent.EndTime.ToLocalTime()}, " +
+            $"waiting until reset time at {ResetTime.ToLocalTime()} ({waitTime.TotalMinutes:F1} minutes)..."
+          );
+          await Task.Delay(waitTime);
+        }
+      }
+      // If the upcoming event queue is empty, wait until reset time
+      else if (queue.UpcomingQueue.IsEmpty)
+      {
+        var waitTime = ResetTime - DateTime.UtcNow;
+        Console.WriteLine("No upcoming events, waiting until reset time at " +
+          $"{ResetTime.ToLocalTime()} ({waitTime.TotalMinutes:F1} minutes)...");
+        await Task.Delay(waitTime);
+      }
+      // There are events in the current queue to process still.
+      // Wait a while to retry so MTGO has a change to perform GC.
+      else
+      {
+        Console.WriteLine("Events still in queue, waiting before retrying...");
+        await Task.Delay(TimeSpan.FromMinutes(5));
+      }
     }
 
     // If we exited because reset time was reached, exit cleanly for restart

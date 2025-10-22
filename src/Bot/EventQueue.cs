@@ -28,6 +28,9 @@ public class EventQueue : DLRWrapper
   {
     public int Id = @event.Id;
     public string Name = @event.ToString();
+    public DateTime StartTime = @event.StartTime;
+    public DateTime EndTime = @event.EndTime;
+
     public dynamic Event = @event;
     public EventComposite? entry = null;
   }
@@ -36,6 +39,11 @@ public class EventQueue : DLRWrapper
   /// The current queue of events to be added to the database.
   /// </summary>
   public ConcurrentQueue<QueueItem> Queue = new();
+
+  /// <summary>
+  /// The queue of upcoming events that are still in progress.
+  /// </summary>
+  public ConcurrentQueue<QueueItem> UpcomingQueue = new();
 
   /// <summary>
   /// The number of events in the queue.
@@ -65,27 +73,20 @@ public class EventQueue : DLRWrapper
       return false;
     }
 
-    Console.WriteLine($"Found event '{@event}'...");
-    Console.WriteLine($"--> Start Time: {@event.StartTime}");
+    var eventEntry = new QueueItem(@event);
+    Console.WriteLine($"Found event '{eventEntry.Name}'...");
+    Console.WriteLine($"--> Start Time: {eventEntry.StartTime.ToLocalTime()}");
+    Console.WriteLine($"--> End Time:   {eventEntry.EndTime.ToLocalTime()}");
 
     if (@event.IsCompleted)
     {
-      Console.WriteLine($"Event '{@event}' is already completed, adding to queue...");
-      Queue.Enqueue(new QueueItem(@event));
+      Console.WriteLine($"Event '{eventEntry.Name}' is already completed, adding to queue...");
+      Queue.Enqueue(eventEntry);
     }
-    // else
-    // {
-    //   @event.TournamentStateChanged += new EventCallback<
-    //     TournamentStateChangedEventArgs
-    //   >((e) =>
-    //   {
-    //     if (e.NewValue == TournamentState.Finished)
-    //     {
-    //       Console.WriteLine($"Event '{@event}' is now finished, adding to queue...");
-    //       Queue.Enqueue(new QueueItem(@event));
-    //     }
-    //   });
-    // }
+    else
+    {
+      UpcomingQueue.Enqueue(eventEntry);
+    }
 
     return true;
   }
@@ -113,7 +114,10 @@ public class EventQueue : DLRWrapper
   {
     // Enqueue or schedule all events that are already in the system.
     await AddEventsToQueue(EventManager.Events);
-    Console.WriteLine($"Initialized event queue with {Queue.Count} events.");
+    if (Queue.Count > 0)
+    {
+      Console.WriteLine($"Initialized event queue with {Queue.Count} events.");
+    }
   }
 
   /// <summary>
@@ -165,6 +169,7 @@ public class EventQueue : DLRWrapper
         catch (Exception e)
         {
           Console.WriteLine($"--> Failed to build event entry for {item.Name}: {e.Message}");
+          Console.WriteLine(e.StackTrace);
 
           //
           // As errors may have occured due to a corrupted enumerator state,

@@ -11,6 +11,7 @@ using MTGOSDK.API.Play.Tournaments;
 using static MTGOSDK.Core.Reflection.DLRWrapper;
 
 using Database.Types;
+using Utils;
 
 
 namespace Database.Schemas;
@@ -98,21 +99,31 @@ public struct StandingEntry
     ICollection<StandingEntry> standings = existing ?? [];
 
     int count = tournament.Standings.Count;
-    foreach (var standing in tournament.Standings)
+    
+    using (var progress = new ProgressBar(count, "Processing standings"))
     {
-      // Skip any standings that has already been processed
-      if (standings.Any(s => s.Rank == standing.Rank))
-        continue;
+      foreach (var standing in tournament.Standings)
+      {
+        // Skip any standings that has already been processed
+        if (standings.Any(s => s.Rank == standing.Rank))
+        {
+          progress.Update();
+          continue;
+        }
 
-      DateTime startTime = DateTime.Now;
-      var standingEntry = new StandingEntry(eventId, standing);
-      standings.Add(standingEntry);
-      Console.WriteLine($"--> Processed standing {standings.Count} of {count}. ({DateTime.Now - startTime})");
+        DateTime startTime = DateTime.Now;
+        var standingEntry = new StandingEntry(eventId, standing);
+        standings.Add(standingEntry);
+        
+        // Update progress with last processing time
+        TimeSpan processingTime = DateTime.Now - startTime;
+        progress.Update(suffix: $"(last: {processingTime.TotalSeconds:F1}s)");
 
-      // If it took longer than 5 minutes, throw a timeout exception
-      if (DateTime.Now - startTime > TimeSpan.FromMinutes(5))
-        throw new TimeoutException("Processing standings took too long.");
-    }
+        // If it took longer than 5 minutes, throw a timeout exception
+        if (processingTime > TimeSpan.FromMinutes(5))
+          throw new TimeoutException("Processing standings took too long.");
+      }
+    } // progress.Dispose() called here, prints final newline
 
     // Verify standings after processing
     ValidateStandings(standings);
