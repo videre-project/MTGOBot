@@ -206,32 +206,34 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       if (queue.Queue.IsEmpty && !queue.UpcomingQueue.IsEmpty)
       {
         var nextEvent = queue.UpcomingQueue.MinBy(e => e.EndTime);
+        var now = DateTime.Now;
+        var resetTimeLocal = ResetTime.ToLocalTime();
 
         // If the next event has already ended, skip the wait and retry immediately
-        if (nextEvent.EndTime <= DateTime.UtcNow)
+        if (nextEvent.EndTime <= now)
         {
           Console.WriteLine(
-            $"Next event already ended at {nextEvent.EndTime.ToLocalTime()}, " +
+            $"Next event already ended at {nextEvent.EndTime}, " +
             $"retrying immediately..."
           );
           await Task.Delay(TimeSpan.FromSeconds(1));
         }
         // If the next event ends before reset time, wait until then.
-        else if (nextEvent.EndTime < ResetTime)
+        else if (nextEvent.EndTime < resetTimeLocal)
         {
-          var waitTime = nextEvent.EndTime - DateTime.UtcNow;
+          var waitTime = nextEvent.EndTime - now;
           Console.WriteLine(
-            $"Waiting until next event ends at {nextEvent.EndTime.ToLocalTime()} " +
+            $"Waiting until next event ends at {nextEvent.EndTime} " +
             $"({waitTime.TotalMinutes:F1} minutes)..."
           );
           await Task.Delay(waitTime);
         }
         else
         {
-          var waitTime = ResetTime - DateTime.UtcNow;
+          var waitTime = resetTimeLocal - now;
           Console.WriteLine(
-            $"Next event ends after reset time at {nextEvent.EndTime.ToLocalTime()}, " +
-            $"waiting until reset time at {ResetTime.ToLocalTime()} ({waitTime.TotalMinutes:F1} minutes)..."
+            $"Next event ends after reset time at {nextEvent.EndTime}, " +
+            $"waiting until reset time at {resetTimeLocal} ({waitTime.TotalMinutes:F1} minutes)..."
           );
           await Task.Delay(waitTime);
         }

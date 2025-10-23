@@ -66,7 +66,7 @@ public class EventQueue : DLRWrapper
     }
 
     // Check that the event is not already added to the queue or database.
-    if (@event.StartTime.AddMinutes(5) >= BotClient.ResetTime ||
+    if (@event.StartTime.AddMinutes(5) >= BotClient.ResetTime.ToLocalTime() ||
         Queue.Contains(new QueueItem(@event)) ||
         await EventRepository.EventExists(@event.Id))
     {
@@ -75,8 +75,8 @@ public class EventQueue : DLRWrapper
 
     var eventEntry = new QueueItem(@event);
     Console.WriteLine($"Found event '{eventEntry.Name}'...");
-    Console.WriteLine($"--> Start Time: {eventEntry.StartTime.ToLocalTime()}");
-    Console.WriteLine($"--> End Time:   {eventEntry.EndTime.ToLocalTime()}");
+    Console.WriteLine($"--> Start Time: {eventEntry.StartTime}");
+    Console.WriteLine($"--> End Time:   {eventEntry.EndTime}");
 
     if (@event.IsCompleted)
     {
