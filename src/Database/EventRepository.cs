@@ -139,9 +139,9 @@ public class EventRepository
         await connection.ExecuteAsync($@"
           INSERT INTO Players
           VALUES {player}
-          ON CONFLICT (id) DO UPDATE
+          ON CONFLICT (name) DO UPDATE
           SET
-            name = EXCLUDED.name
+            id = EXCLUDED.id
         ");
       }
     }
