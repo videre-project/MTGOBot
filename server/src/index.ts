@@ -29,7 +29,7 @@ app.get('/census/decklists', async (req, res) => {
   }
 
   const decklists = await GetDecklists(page, parseInt(id), name, date);
-  if (!decklists.length) {
+  if (!decklists || !decklists.length) {
     console.log(`Could not find decklists for event ${name} #${id}`);
     res.sendStatus(500);
     return;

@@ -60,7 +60,7 @@ export async function UpdateDecks(page: any, events: EventFragment[] = null) {
   for (const { id: eventId, name, date } of events) {
     console.log(`Updating decks for event ${name} #${eventId}`);
     const decklists = await GetDecklists(page, eventId, name, date);
-    if (!decklists.length) {
+    if (!decklists || !decklists.length) {
       transactionSuccess = false;
       console.log("--> Could not find decklists. Skipping...");
       continue; // Skip this event if no decklists could be found.
