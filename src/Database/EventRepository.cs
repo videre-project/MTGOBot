@@ -136,12 +136,11 @@ public class EventRepository
     {
       foreach(var player in players)
       {
+        // Skip players that already exist (by id or name) to preserve older data.
         await connection.ExecuteAsync($@"
           INSERT INTO Players
           VALUES {player}
-          ON CONFLICT (name) DO UPDATE
-          SET
-            id = EXCLUDED.id
+          ON CONFLICT (id) DO NOTHING
         ");
       }
     }
