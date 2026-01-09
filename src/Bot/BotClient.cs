@@ -222,6 +222,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         else if (nextEvent.EndTime < resetTimeLocal)
         {
           var waitTime = nextEvent.EndTime - now;
+          if (waitTime < TimeSpan.Zero) waitTime = TimeSpan.Zero;
           Console.WriteLine(
             $"Waiting until next event ends at {nextEvent.EndTime} " +
             $"({waitTime.TotalMinutes:F1} minutes)..."
@@ -231,6 +232,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         else
         {
           var waitTime = resetTimeLocal - now;
+          if (waitTime < TimeSpan.Zero) waitTime = TimeSpan.Zero;
           Console.WriteLine(
             $"Next event ends after reset time at {nextEvent.EndTime}, " +
             $"waiting until reset time at {resetTimeLocal} ({waitTime.TotalMinutes:F1} minutes)..."
@@ -242,6 +244,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       else if (queue.UpcomingQueue.IsEmpty)
       {
         var waitTime = ResetTime - DateTime.UtcNow;
+        if (waitTime < TimeSpan.Zero) waitTime = TimeSpan.Zero;
         Console.WriteLine("No upcoming events, waiting until reset time at " +
           $"{ResetTime.ToLocalTime()} ({waitTime.TotalMinutes:F1} minutes)...");
         await Task.Delay(waitTime);
