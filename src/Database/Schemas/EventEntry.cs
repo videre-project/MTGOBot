@@ -45,6 +45,10 @@ public struct EventEntry
   /// </summary>
   public static FormatType GetFormatType(Tournament tournament)
   {
+    if (tournament.Format.Name == "Contraption" &&
+        tournament.ToString().Contains("Premodern"))
+      return FormatType.Premodern;
+
     foreach (var format in Enum.GetValues(typeof(FormatType)))
     {
       if (tournament.ToString().Contains(format.ToString()))
