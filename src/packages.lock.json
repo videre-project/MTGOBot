@@ -19,15 +19,16 @@
       },
       "MTGOSDK": {
         "type": "Direct",
-        "requested": "[0.8.6.20251008-preview.10, )",
-        "resolved": "0.8.6.20251008-preview.10",
-        "contentHash": "RrIoULnawQTXr0BE2CRuWRcUMbe9MkINw5SCQ4RX+PrGdzU7siWv+mY2PhrhYE17rGk1+P4rn7PQfcUnxzC2qg==",
+        "requested": "[1.0.1.20260116, )",
+        "resolved": "1.0.1.20260116",
+        "contentHash": "GIc41ZoikhJfMfoYijkRgdn++WiIl61RkIcr4VRtfcF17xORivv8r3BRXytmA4sCYE1pD73XEGTledCVg9Si8g==",
         "dependencies": {
           "ImpromptuInterface": "8.0.6",
-          "MTGOSDK.Win32": "0.8.6.20251008-preview.10",
+          "MTGOSDK.Win32": "1.0.1.20260116",
+          "MessagePack": "3.1.4",
+          "MessagePack.Annotations": "3.1.4",
           "Microsoft.Diagnostics.Runtime": "4.0.0-beta.24360.3",
-          "Microsoft.Extensions.Logging": "10.0.0-rc.1.25451.107",
-          "Newtonsoft.Json": "13.0.4"
+          "Microsoft.Extensions.Logging": "10.0.0-rc.1.25451.107"
         }
       },
       "Newtonsoft.Json": {
@@ -38,11 +39,11 @@
       },
       "Npgsql": {
         "type": "Direct",
-        "requested": "[10.0.0-rc.1, )",
-        "resolved": "10.0.0-rc.1",
-        "contentHash": "kORndN04os9mv9l1MtEBoXydufX2TINDR5wgcmh7vsn+0x7AwfrCgOKana3Sz/WlRQ9KsaWHWPnFQ7ZKF+ck7Q==",
+        "requested": "[10.0.1, )",
+        "resolved": "10.0.1",
+        "contentHash": "XyUcxEfqlFomhNTG/ZdGlec+uSOQArKz0Mzz8jYKP/Jj9GM2YabU5CVZtp0yiC4f9hRp+tRZTnHMatJeJ3rwgw==",
         "dependencies": {
-          "Microsoft.Extensions.Logging.Abstractions": "10.0.0-rc.1.25451.107"
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.0"
         }
       },
       "Azure.Core": {
@@ -84,6 +85,26 @@
           "Dynamitey": "3.0.3"
         }
       },
+      "MessagePack": {
+        "type": "Transitive",
+        "resolved": "3.1.4",
+        "contentHash": "BH0wlHWmVoZpbAPyyt2Awbq30C+ZsS3eHSkYdnyUAbqVJ22fAJDzn2xTieBeoT5QlcBzp61vHcv878YJGfi3mg==",
+        "dependencies": {
+          "MessagePack.Annotations": "3.1.4",
+          "MessagePackAnalyzer": "3.1.4",
+          "Microsoft.NET.StringTools": "17.11.4"
+        }
+      },
+      "MessagePack.Annotations": {
+        "type": "Transitive",
+        "resolved": "3.1.4",
+        "contentHash": "aVWrDAkCdqxwQsz/q0ldPh2EFn48M99YUzE9OvZjMq2RNLKz4o2z88iGFvSvbMqOWRweRvKPHBJZe22PRqzslQ=="
+      },
+      "MessagePackAnalyzer": {
+        "type": "Transitive",
+        "resolved": "3.1.4",
+        "contentHash": "CTaSsN/liJ7MhLCAB7Z4ZLBNuVGCq9lt2BT/cbrc9vzGv89yK3CqIA+z9T19a11eQYl9etZHL6MQJgCqECRVpg=="
+      },
       "Microsoft.Bcl.AsyncInterfaces": {
         "type": "Transitive",
         "resolved": "1.1.1",
@@ -116,8 +137,8 @@
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.0-rc.1.25451.107",
-        "contentHash": "Wm2HfC0GlWExQmJajq85FHM9iHEOm61Z1c2YLivbzI6R5eT+TTSyfk3RHUra4oBU+oj1XhOIQ5hLW6Kg2r85tg=="
+        "resolved": "10.0.0",
+        "contentHash": "L3AdmZ1WOK4XXT5YFPEwyt0ep6l8lGIPs7F5OOBZc77Zqeo01Of7XXICy47628sdVl0v/owxYJTe86DTgFwKCA=="
       },
       "Microsoft.Extensions.Logging": {
         "type": "Transitive",
@@ -131,10 +152,10 @@
       },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.0-rc.1.25451.107",
-        "contentHash": "RwlHkxMbkgvKs5m0jfguF+a6nZH1qaJVC63cSAODNLMVyX22VumSWwDBgnzFTB3oUHfOnQgLmtEK1U/eEQRLLQ==",
+        "resolved": "10.0.0",
+        "contentHash": "FU/IfjDfwaMuKr414SSQNTIti/69bHEMb+QKrskRb26oVqpx3lNFXMjs/RC9ZUuhBhcwDM2BwOgoMw+PZ+beqQ==",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.0-rc.1.25451.107"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.0"
         }
       },
       "Microsoft.Extensions.Options": {
@@ -173,10 +194,15 @@
         "resolved": "6.35.0",
         "contentHash": "xuR8E4Rd96M41CnUSCiOJ2DBh+z+zQSmyrYHdYhD6K4fXBcQGVnRCFQ0efROUYpP+p0zC1BLKr0JRpVuujTZSg=="
       },
+      "Microsoft.NET.StringTools": {
+        "type": "Transitive",
+        "resolved": "17.11.4",
+        "contentHash": "mudqUHhNpeqIdJoUx2YDWZO/I9uEDYVowan89R6wsomfnUJQk6HteoQTlNjZDixhT2B4IXMkMtgZtoceIjLRmA=="
+      },
       "MTGOSDK.Win32": {
         "type": "Transitive",
-        "resolved": "0.8.6.20251008-preview.10",
-        "contentHash": "VRGW6s+hxZFGKJYCc4f4PBRMw362foR/k3NxcRHAfi1ZFKRBxoylNDPzBv6SV+srCTpGto+YA5OQGz1JRuqtUQ==",
+        "resolved": "1.0.1.20260116",
+        "contentHash": "EzvUuMuC7W9fqdvIH3dkOIGPEn65OfNuOU7bIkrD75AGC+mIU1+MK9w6sdNauNEI9TjvUsOM4hCCmmsnguQxtg==",
         "dependencies": {
           "Iced": "1.21.0"
         }

@@ -17,9 +17,9 @@
     <PackageReference Include="Newtonsoft.Json"
                       Version="13.0.4" />
     <PackageReference Include="Npgsql"
-                      Version="10.0.0-rc.1" />
+                      Version="10.0.1" />
     <PackageReference Include="MTGOSDK"
-                      Version="0.8.6.20251008-preview.10" />
+                      Version="1.0.1.20260116" />
   </ItemGroup>
 
 </Project>
