@@ -110,13 +110,19 @@ public class EventQueue : DLRWrapper
   /// <summary>
   /// Initializes the event queue and adds callbacks to add events to the queue.
   /// </summary>
-  public async Task InitializeQueue()
+  public async Task InitializeQueue(bool retry = true)
   {
     // Enqueue or schedule all events that are already in the system.
     await AddEventsToQueue(EventManager.Events);
     if (Queue.Count > 0)
     {
       Console.WriteLine($"Initialized event queue with {Queue.Count} events.");
+    }
+    else if (retry)
+    {
+      // Lets wait 30 seconds before checking again.
+      await Task.Delay(30_000);
+      await InitializeQueue(false);
     }
   }
 

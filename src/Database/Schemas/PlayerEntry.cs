@@ -3,6 +3,7 @@
   SPDX-License-Identifier: Apache-2.0
 **/
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -19,7 +20,11 @@ public struct PlayerEntry
 
   public PlayerEntry(User player)
   {
-    this.Id   = player.Id;
+    // If the player ID is -1 (anonymous/private profile), generate a deterministic
+    // negative ID based on their name to preserve identity within the database.
+    this.Id   = (player.Id == -1) 
+        ? -Math.Abs(player.Name.GetHashCode()) 
+        : player.Id;
     this.Name = player.Name;
   }
 
@@ -28,14 +33,31 @@ public struct PlayerEntry
     ICollection<PlayerEntry>? existing = null)
   {
     ICollection<PlayerEntry> players = existing ?? [];
+    
+    // Use a hash set of (Id, Name) to ensure uniqueness in this collection
+    var uniquePlayers = new HashSet<(int, string)>(
+        players.Select(p => (p.Id, p.Name))
+    );
+
+    void AddUnique(User user)
+    {
+      var entry = new PlayerEntry(user);
+      if (uniquePlayers.Add((entry.Id, entry.Name)))
+      {
+        players.Add(entry);
+      }
+    }
+
     foreach (var player in tournament.Players)
     {
-      // Skip any duplicate players
-      if (players.Any(p => p.Id != -1 && p.Id == player.Id))
-        continue;
-
-      players.Add(new PlayerEntry(player));
+      AddUnique(player);
     }
+
+    foreach (var standing in tournament.Standings)
+    {
+      AddUnique(standing.Player);
+    }
+
     return players;
   }
 
