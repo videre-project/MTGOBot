@@ -70,12 +70,14 @@ export async function GetEvents(
  * @param page The puppeteer page object
  * @param source The source MTGO url for the event
  * @param events The list of events to search
+ * @param id The event id
  * @returns The MTGGoldfish url for the event
  */
 export async function FilterEventList(
   page: any,
   source: string,
   events: IEventList,
+  id?: number
 ) : Promise<string | null> {
   // Match each tournament page by it's source MTGO url.
   for (const [uid, _name] of events) {
@@ -91,6 +93,9 @@ export async function FilterEventList(
     );
 
     if (match == source) return url;
+
+    // Check if the event id matches the source url.
+    if (id && match?.endsWith(`${id}`)) return url;
   }
 
   return null;
@@ -120,7 +125,7 @@ export async function GetEventUrl(
   for (const offset of offsets) {
     const candidateDate = GetOffset(date, offset);
     const source = GetMTGOUrl(id, name, candidateDate);
-    const match = await FilterEventList(page, source, events);
+    const match = await FilterEventList(page, source, events, id);
 
     if (match) return match;
   }

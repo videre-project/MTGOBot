@@ -136,7 +136,8 @@ export async function UpdateArchetypes(page: any, decks: DeckComposite[] = null)
     console.log(`Updating archetypes for event ${name} #${eventId}`);
 
     // Try to fetch the event url based on the event metadata.
-    const url = await GetEventUrl(page, eventId, name, date);
+    const prefix = name.split(' - ')[0];
+    const url = await GetEventUrl(page, eventId, prefix, date);
     if (!url) {
       transactionSuccess = false;
       console.log("--> Could not find event url. Skipping...");
