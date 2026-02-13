@@ -136,12 +136,31 @@ public class EventRepository
     {
       foreach(var player in players)
       {
-        // Skip players that already exist (by id or name) to preserve older data.
-        await connection.ExecuteAsync($@"
-          INSERT INTO Players
-          VALUES {player}
+        // Try to insert with the official ID first.
+        int rows = await connection.ExecuteAsync($@"
+          INSERT INTO Players (id, name)
+          VALUES (@Id, @Name)
           ON CONFLICT (id) DO NOTHING
-        ");
+        ", player);
+
+        // If no rows were affected, the ID is already in the database.
+        // We check if the name is also present; if not, we have a name change
+        // conflict and must use a synthetic ID to record the new name.
+        if (rows == 0)
+        {
+          bool nameExists = await connection.ExecuteScalarAsync<bool>($@"
+            SELECT EXISTS(SELECT 1 FROM Players WHERE name = @Name)
+          ", player);
+
+          if (!nameExists)
+          {
+            await connection.ExecuteAsync($@"
+              INSERT INTO Players (id, name)
+              VALUES (@Id, @Name)
+              ON CONFLICT (id) DO NOTHING
+            ", new { Id = PlayerEntry.GenerateStableId(player.Name), Name = player.Name });
+          }
+        }
       }
     }
   }

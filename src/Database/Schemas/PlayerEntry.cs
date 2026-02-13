@@ -20,12 +20,21 @@ public struct PlayerEntry
 
   public PlayerEntry(User player)
   {
-    // If the player ID is -1 (anonymous/private profile), generate a deterministic
-    // negative ID based on their name to preserve identity within the database.
-    this.Id   = (player.Id == -1) 
-        ? -Math.Abs(player.Name.GetHashCode()) 
-        : player.Id;
+    this.Id   = player.Id;
     this.Name = player.Name;
+  }
+
+  /// <summary>
+  /// Generates a deterministic negative ID based on the player's name.
+  /// </summary>
+  public static int GenerateStableId(string name)
+  {
+    int hash = 0;
+    foreach (char c in name)
+    {
+        hash = (hash * 31) + c;
+    }
+    return -Math.Abs(hash);
   }
 
   public static ICollection<PlayerEntry> FromEvent(
