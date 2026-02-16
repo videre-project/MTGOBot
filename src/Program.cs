@@ -5,7 +5,11 @@
 
 using System;
 
+using Microsoft.Extensions.Logging;
+using MTGOSDK.Core.Logging;
+
 using Bot;
+
 
 //
 // Parse CLI arguments to control the bot's startup behavior.
@@ -27,13 +31,26 @@ foreach (var arg in Environment.GetCommandLineArgs())
   }
 }
 
+// Initialize the logging system.
+ILoggerFactory factory = LoggerFactory.Create(builder =>
+{
+  builder.AddSimpleConsole(options =>
+  {
+    options.IncludeScopes = false;
+    options.SingleLine = true;
+    options.TimestampFormat = "[HH:mm:ss] ";
+  });
+  builder.SetMinimumLevel(LogLevel.Debug);
+});
+LoggerBase.SetFactoryInstance(factory);
+
 // Starts the MTGO Bot in a new subprocess.
 var bot = new Runner("BotClient", async () =>
 {
   // Main entry point for the MTGO Bot.
-  using (var client = new BotClient(!norestart, pollIdle))
+  using (var client = new BotClient(!norestart, pollIdle, loggerFactory: factory))
   {
-    Console.WriteLine("Finished loading.");
+    Log.Information("Finished loading.");
     await client.StartEventQueue();
   }
   
@@ -51,6 +68,6 @@ bot.OnExitRequested += () => Environment.Exit(0);
 // If provided a console, block the main thread until a key is pressed.
 if (!Console.IsInputRedirected && Console.KeyAvailable)
 {
-  Console.WriteLine("Press any key to exit.");
+  Log.Information("Press any key to exit.");
   Console.ReadKey();
 }

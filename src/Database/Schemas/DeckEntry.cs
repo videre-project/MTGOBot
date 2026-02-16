@@ -15,6 +15,7 @@ using MTGOSDK.API.Play.Tournaments;
 using MTGOSDK.API.Users;
 
 using Database.Types;
+using Scraper;
 
 
 namespace Database.Schemas;
@@ -27,14 +28,19 @@ public struct DeckEntry
   public CardQuantityPair[] MainBoard { get; set; }
   public CardQuantityPair[] SideBoard { get; set; }
 
-  public DeckEntry(int eventId, User player, JToken json)
+  public DeckEntry(int eventId, string playerName, JToken json)
   {
     this.Id        = GetDeckId(json);
     this.EventId   = eventId;
-    this.Player    = player.Name;
+    this.Player    = playerName;
     this.MainBoard = GetBoard(json, "main");
     this.SideBoard = GetBoard(json, "sideboard");
   }
+
+  [Obsolete("Use the constructor that takes a player name string.")]
+  public DeckEntry(int eventId, User player, JToken json)
+    : this(eventId, player.Name, json)
+  { }
 
   /// <summary>
   /// Retrieves the deck ID from the given JSON object.
@@ -70,33 +76,27 @@ public struct DeckEntry
 
     // Extract the decklists posted on the DayBreak Census API.
     var decks = new List<DeckEntry>();
-    using (HttpClient client = new HttpClient())
+    var json = await MTGODecklistScraper.GetDecklists(
+      tournament.Id,
+      tournament.Description,
+      tournament.StartTime
+    );
+
+    if (json == null)
     {
-      // Fetch the decklists for the event.
-      string name = tournament.Description;
-      int eventId = tournament.Id;
-      string date = tournament.StartTime.ToString("yyyy-MM-dd");
-      string url = $"http://localhost:3001/census/decklists?name={name}&id={eventId}&date={date}";
-      using var response = await client.GetAsync(url);
+      throw new Exception($"Failed to fetch decklists for event {tournament.Id}");
+    }
 
-      if (!response.IsSuccessStatusCode)
-        throw new Exception($"Failed to fetch decklists for event {eventId}");
+    foreach (var deck in json)
+    {
+      // Skip decks that aren't from players that participated in the event.
+      int playerId = deck["loginid"].ToObject<int>();
+      if (!playerIds.Contains(playerId))
+        continue;
 
-      // Extract the contents of each decklist returned by the API call.
-      using var content = response.Content;
-      var json = JObject.Parse(await content.ReadAsStringAsync());
-      foreach (var deck in json["tournament_decklist_by_id_list"])
-      {
-        // Skip decks that aren't from players that participated in the event.
-        int playerId = deck["loginid"].ToObject<int>();
-        if (!playerIds.Contains(playerId))
-          continue;
-
-        var user = new User(playerId, deck["player"].ToObject<string>());
-        var deckEntry = new DeckEntry(eventId, user, deck);
-        decks.Add(deckEntry);
-        // Thread.Sleep(250);
-      }
+      string playerName = deck["player"].ToObject<string>();
+      var deckEntry = new DeckEntry(tournament.Id, playerName, deck);
+      decks.Add(deckEntry);
     }
 
     return decks;

@@ -103,20 +103,53 @@ public class Runner
     bool exitEarly = false;
     do
     {
+      var mainModule = Process.GetCurrentProcess().MainModule.FileName;
+      var arguments = $"--runner {name}";
+
+      //
+      // If we are running via the dotnet host (e.g. dotnet.exe MTGOBot.dll), 
+      // we need to include the assembly path in the arguments for the subprocess.
+      //
+      if (mainModule.EndsWith("dotnet.exe", StringComparison.OrdinalIgnoreCase) ||
+          mainModule.EndsWith("dotnet", StringComparison.OrdinalIgnoreCase))
+      {
+        var entryAssembly = System.Reflection.Assembly.GetEntryAssembly()?.Location;
+        if (!string.IsNullOrEmpty(entryAssembly))
+        {
+          arguments = $"\"{entryAssembly}\" {arguments}";
+        }
+      }
+
+      var restartDelay = TimeSpan.Zero;
       using var bot = new Process()
       {
         StartInfo = new ProcessStartInfo
         {
-          FileName = Process.GetCurrentProcess().MainModule.FileName,
-          Arguments = $"--runner {name}",
+          FileName = mainModule,
+          Arguments = arguments,
           UseShellExecute = false,
           RedirectStandardOutput = true,
           RedirectStandardError = true,
         },
         EnableRaisingEvents = true,
       };
+
       bot.ErrorDataReceived += (s, e) => Console.Error.WriteLine(e.Data);
-      bot.OutputDataReceived += (s, e) => Console.WriteLine(e.Data);
+      bot.OutputDataReceived += (s, e) =>
+      {
+        if (e.Data?.StartsWith("[Runner:Wait:") == true)
+        {
+          var waitTime = e.Data.Split(':')[2].TrimEnd(']');
+          if (double.TryParse(waitTime, out double ms))
+          {
+            restartDelay = TimeSpan.FromMilliseconds(ms);
+          }
+        }
+        else if (!string.IsNullOrEmpty(e.Data))
+        {
+          Console.WriteLine(e.Data);
+        }
+      };
 
       // Start the bot subprocess.
       bot.Start();
@@ -124,16 +157,34 @@ public class Runner
       bot.BeginErrorReadLine();
       bot.WaitForExit();
 
+      // Force a garbage collection to clear any memory used during process management
+      GC.Collect();
+      GC.WaitForPendingFinalizers();
+      GC.Collect();
+
+      // If the bot requested a wait, sleep before restarting.
+      if (restartDelay > TimeSpan.Zero)
+      {
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Runner waiting for {restartDelay.TotalMinutes:F1} minutes...");
+        Thread.Sleep(restartDelay);
+        tries = 0;
+        exitEarly = false;
+      }
+
       // If the exit code is 99, this is an intentional clean shutdown.
       if (bot.ExitCode == 99) break;
 
       // For exit code 0 (normal/reset) or any error code, evaluate restart logic
       // Handle early exit conditions to determine whether to restart the bot.
       if (MinRuntime != null)
+      {
         exitEarly = bot.ExitTime.Subtract(bot.StartTime) < MinRuntime;
+      }
       // Otherwise, increment only based on the number of retries.
       else if (MaxRetries != null)
+      {
         tries += 1;
+      }
     }
     // Restart the bot on exit unless it has exited early after exceeding the
     // maximum number of retries (if specified), otherwise exit the runner.

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 using MTGOSDK.API.Play;
 using MTGOSDK.API.Play.Tournaments;
+using MTGOSDK.Core.Logging;
 using MTGOSDK.Core.Reflection;
 
 using Database;
@@ -28,8 +29,8 @@ public class EventQueue : DLRWrapper
   {
     public int Id = @event.Id;
     public string Name = @event.ToString();
-    public DateTime StartTime = @event.StartTime;
-    public DateTime EndTime = @event.EndTime;
+    public DateTime StartTime = @event.StartTime.ToLocalTime();
+    public DateTime EndTime = @event.EndTime.ToLocalTime();
 
     public dynamic Event = @event;
     public EventComposite? entry = null;
@@ -74,13 +75,15 @@ public class EventQueue : DLRWrapper
     }
 
     var eventEntry = new QueueItem(@event);
-    Console.WriteLine($"Found event '{eventEntry.Name}'...");
-    Console.WriteLine($"--> Start Time: {eventEntry.StartTime}");
-    Console.WriteLine($"--> End Time:   {eventEntry.EndTime}");
+    Log.Information(
+      "Found event {Name}: Start={StartTime}, End={EndTime}",
+      eventEntry.Name,
+      eventEntry.StartTime,
+      eventEntry.EndTime);
 
     if (@event.IsCompleted)
     {
-      Console.WriteLine($"Event '{eventEntry.Name}' is already completed, adding to queue...");
+      Log.Information("Event {Name} is already completed, adding to queue...", eventEntry.Name);
       Queue.Enqueue(eventEntry);
     }
     else
@@ -116,7 +119,7 @@ public class EventQueue : DLRWrapper
     await AddEventsToQueue(EventManager.Events);
     if (Queue.Count > 0)
     {
-      Console.WriteLine($"Initialized event queue with {Queue.Count} events.");
+      Log.Information("Initialized event queue with {Count} events.", Queue.Count);
     }
     else if (retry)
     {
@@ -135,7 +138,7 @@ public class EventQueue : DLRWrapper
     while (Queue.TryDequeue(out QueueItem? item))
     {
       EventComposite composite = default;
-      Console.WriteLine($"\nProcessing event '{item.Name}' ...");
+      Log.Information("\nProcessing event {Name} ...", item.Name);
 
       int retries = 0;
       int maxRetries = 5;
@@ -150,7 +153,7 @@ public class EventQueue : DLRWrapper
             item.Event = Retry(() => EventManager.GetEvent(item.Id), raise: true)!;
             if (item.Event == null)
             {
-              Console.WriteLine($"--> Event '{item.Name}' is not available, skipping...");
+              Log.Information("--> Event '{Name}' is not available, skipping...", item.Name);
               continue;
             }
           }
@@ -158,7 +161,7 @@ public class EventQueue : DLRWrapper
 
           if (item.entry.HasValue)
           {
-            Console.WriteLine($"--> Reusing existing event entry for {tournament}.");
+            Log.Debug("--> Reusing existing event entry for {Tournament}.", tournament);
             composite = item.entry.Value;
             composite.BuildCollection(tournament);
           }
@@ -169,13 +172,20 @@ public class EventQueue : DLRWrapper
             item.entry = composite;
           }
 
-          Console.WriteLine($"--> Got event entry for {item.Name} ({(DateTime.Now - start).TotalSeconds} s).");
+          Log.Information("--> Got event entry for {Name} ({Duration} s).", item.Name, (DateTime.Now - start).TotalSeconds);
           break;
         }
         catch (Exception e)
         {
-          Console.WriteLine($"--> Failed to build event entry for {item.Name}: {e.Message}");
-          Console.WriteLine(e.StackTrace);
+          Log.Error("--> Failed to build event entry for {Name}: {Message}", item.Name, e.Message);
+          Log.Trace("{StackTrace}", (object?)e.StackTrace ?? "");
+
+          // If there is a nested exception, we should iterate over and log it.
+          if (e.InnerException != null)
+          {
+            Log.Error("--> Inner exception: {Message}", e.InnerException.Message);
+            Log.Trace("{StackTrace}", (object?)e.InnerException.StackTrace ?? "");
+          }
 
           //
           // As errors may have occured due to a corrupted enumerator state,
@@ -193,16 +203,17 @@ public class EventQueue : DLRWrapper
         // Add the event to the database.
         var start = DateTime.Now;
         await EventRepository.AddEvent(composite);
-        Console.WriteLine($"--> Added event '{item.Name}' to the database ({(DateTime.Now - start).TotalSeconds} s).");
+        Log.Information("--> Added event {Name} to the database ({Duration} s).", item.Name, (DateTime.Now - start).TotalSeconds);
         hasUpdated |= true;
       }
       catch (Exception e)
       {
-        Console.WriteLine($"--> Failed to add event '{item.Name}' to the database: {e.Message}");
-        Console.WriteLine(e.StackTrace);
+        Log.Error("--> Failed to add event '{Name}' to the database: {Message}", item.Name, e.Message);
+        Log.Trace("{StackTrace}", (object?)e.StackTrace ?? "");
         if (e.InnerException != null)
         {
-          Console.WriteLine($"    Inner exception: {e.InnerException.Message}");
+          Log.Error("    Inner exception: {Message}", e.InnerException.Message);
+          Log.Trace("{StackTrace}", (object?)e.InnerException.StackTrace ?? "");
         }
       }
     }

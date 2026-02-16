@@ -1,0 +1,26 @@
+services:
+  mtgobot:
+    build:
+      context: ../mtgo-oci/mtgosdk
+      dockerfile: Dockerfile
+      args:
+        BASE_IMAGE: videreproject/mtgo:headless
+    image: mtgobot:local
+    container_name: mtgobot
+    stdin_open: true
+    tty: true
+    environment:
+      - MTGOSDK_PATH=/MTGOSDK
+      # Disable MTGO GUI for bot execution
+      - DISPLAY=:99
+      # Suppress Wine debug noise (including ALSA errors)
+      - WINEDEBUG=-all
+      - ALSA_LOG_LEVEL=0
+      - TZ=America/Los_Angeles
+    volumes:
+      - .:/workspace
+      - ../MTGOSDK:/MTGOSDK
+    working_dir: /workspace
+    # Ensure Xvfb and basic environment are initialized
+    entrypoint: ["/usr/local/bin/xvfb-entrypoint.sh", "/opt/scripts/entrypoint.sh"]
+    command: /bin/bash

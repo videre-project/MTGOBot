@@ -9,8 +9,12 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 using MTGOSDK.API;
 using MTGOSDK.Core.Exceptions;
+using MTGOSDK.Core.Logging;
 using MTGOSDK.Core.Memory;
 using MTGOSDK.Core.Reflection;
 using MTGOSDK.Core.Remoting;
@@ -57,10 +61,13 @@ public class BotClient : DLRWrapper<Client>, IDisposable
   
   public bool PollIdle { get; set; }
 
+  private readonly ILoggerFactory _loggerFactory;
+
   public BotClient(
       bool restart = false,
       bool pollIdle = true,
-      bool ignoreStatusCheck = false) : base(
+      bool ignoreStatusCheck = false,
+      ILoggerFactory? loggerFactory = null) : base(
     factory: async () =>
     {
       // Wait until the main MTGO server is online.
@@ -81,7 +88,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         }
         if (!online)
         {
-          Console.WriteLine("MTGO servers are currently offline. Waiting...");
+          Log.Information("MTGO servers are currently offline. Waiting...");
           await Task.Delay(TimeSpan.FromMinutes(30));
           restart |= true; // Restart after downtime.
         }
@@ -90,6 +97,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
   {
     DotEnv.LoadFile();
 
+    this._loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
     this.Client = null!;
     StartClient();
 
@@ -108,7 +116,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       Client.IsConnectedChanged.Clear();
       Client.Dispose();
 
-      Console.WriteLine("Restarting MTGO client...");
+      Log.Information("Restarting MTGO client...");
       Task.Run(async delegate
       {
         if (!await WaitUntil(() => !RemoteClient.KillProcess(), 10))
@@ -121,7 +129,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
     }
 
     // Initialize the client instance.
-    Console.WriteLine($"Connecting to MTGO v{Client.Version}...");
+    Log.Information("Connecting to MTGO v{Version}...", Client.Version);
     this.Client = new Client(
       !restart && RemoteClient.HasStarted
         ? new ClientOptions()
@@ -131,7 +139,8 @@ public class BotClient : DLRWrapper<Client>, IDisposable
           StartMinimized = true,
           CloseOnExit = true,
           AcceptEULAPrompt = isColdStart
-        }
+        },
+      loggerFactory: _loggerFactory
     );
 
     // If not connected, attempt to log in.
@@ -147,7 +156,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
     // This will trigger a restart of the client when using a runner.
     Client.IsConnectedChanged += delegate (object? sender)
     {
-      Console.WriteLine("The MTGO client has been disconnected. Stopping...");
+      Log.Information("The MTGO client has been disconnected. Stopping...");
       Client.Dispose();
       Environment.Exit(-1);
     };
@@ -166,32 +175,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
 
       // Process the event queue. This will return true if there are events
       var queue = new EventQueue();
-      if (await queue.ProcessQueue(this) || Uptime < TimeSpan.FromMinutes(5))
-      {
-        //
-        // Check every 10 minutes until archetypes are updated for all processed
-        // events. This can take between 20-30 minutes for all external sources
-        // to be updated.
-        //
-        // This will send a request to the local server to handle updating the
-        // archetype entries for the processed events.
-        //
-        using (var client = new HttpClient()
-        {
-          BaseAddress = new Uri("http://localhost:3001"),
-          Timeout = TimeSpan.FromMinutes(5)
-        })
-        {
-          HttpResponseMessage res = null!;
-          int retries = 7;
-          while (retries-- > 0)
-          {
-            res = await client.PostAsync("/events/update-archetypes", null);
-            if (res.IsSuccessStatusCode) break;
-            await Task.Delay(TimeSpan.FromMinutes(10));
-          }
-        }
-      }
+      bool hasEventsProcessed = await queue.ProcessQueue(this);
       if (!PollIdle) break;
 
       // Clear any small object caches to prevent memory leaks on the client.
@@ -203,6 +187,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
 
       // We've processed all finished events but there are upcoming events still.
       // Here, we'll wait until the next event ends or reset time is reached.
+      TimeSpan waitTime = TimeSpan.Zero;
       if (queue.Queue.IsEmpty && !queue.UpcomingQueue.IsEmpty)
       {
         var nextEvent = queue.UpcomingQueue.MinBy(e => e.EndTime);
@@ -212,58 +197,108 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         // If the next event has already ended, skip the wait and retry immediately
         if (nextEvent.EndTime <= now)
         {
-          Console.WriteLine(
-            $"Next event already ended at {nextEvent.EndTime}, " +
-            $"retrying immediately..."
+          Log.Information(
+            "Next event already ended at {EndTime}, retrying immediately...",
+            nextEvent.EndTime
           );
-          await Task.Delay(TimeSpan.FromSeconds(1));
+          waitTime = TimeSpan.FromSeconds(1);
         }
         // If the next event ends before reset time, wait until then.
         else if (nextEvent.EndTime < resetTimeLocal)
         {
-          var waitTime = nextEvent.EndTime - now;
+          waitTime = nextEvent.EndTime - now;
           if (waitTime < TimeSpan.Zero) waitTime = TimeSpan.Zero;
-          Console.WriteLine(
-            $"Waiting until next event ends at {nextEvent.EndTime} " +
-            $"({waitTime.TotalMinutes:F1} minutes)..."
+          Log.Information(
+            "Waiting until next event ends at {EndTime} ({WaitTime} minutes)...",
+            nextEvent.EndTime,
+            waitTime.TotalMinutes.ToString("F1")
           );
-          await Task.Delay(waitTime);
         }
         else
         {
-          var waitTime = resetTimeLocal - now;
+          waitTime = resetTimeLocal - now;
           if (waitTime < TimeSpan.Zero) waitTime = TimeSpan.Zero;
-          Console.WriteLine(
-            $"Next event ends after reset time at {nextEvent.EndTime}, " +
-            $"waiting until reset time at {resetTimeLocal} ({waitTime.TotalMinutes:F1} minutes)..."
+          Log.Information(
+            "Next event ends after reset time at {EndTime}, waiting until reset time at {ResetTime} ({WaitTime} minutes)...",
+            nextEvent.EndTime,
+            resetTimeLocal,
+            waitTime.TotalMinutes.ToString("F1")
           );
-          await Task.Delay(waitTime);
         }
       }
       // If the upcoming event queue is empty, wait until reset time
       else if (queue.UpcomingQueue.IsEmpty)
       {
-        var waitTime = ResetTime - DateTime.UtcNow;
+        waitTime = ResetTime - DateTime.UtcNow;
         if (waitTime < TimeSpan.Zero) waitTime = TimeSpan.Zero;
-        Console.WriteLine("No upcoming events, waiting until reset time at " +
-          $"{ResetTime.ToLocalTime()} ({waitTime.TotalMinutes:F1} minutes)...");
-        await Task.Delay(waitTime);
+        Log.Information(
+          "No upcoming events, waiting until reset time at {ResetTime} ({WaitTime} minutes)...",
+          ResetTime,
+          waitTime.TotalMinutes.ToString("F1")
+        );
       }
       // There are events in the current queue to process still.
       // Wait a while to retry so MTGO has a change to perform GC.
       else
       {
-        Console.WriteLine("Events still in queue, waiting before retrying...");
-        await Task.Delay(TimeSpan.FromMinutes(5));
+        Log.Information("Events still in queue, waiting before retrying...");
+        waitTime = TimeSpan.FromMinutes(5);
       }
+
+      if (hasEventsProcessed || Uptime < TimeSpan.FromMinutes(5))
+      {
+        //
+        // Check every 10 minutes until archetypes are updated for all processed
+        // events. This can take between 20-30 minutes for all external sources
+        // to be updated.
+        //
+        await Scraper.GoldfishScraper.UpdateArchetypesAsync();
+      }
+
+      // If we are waiting for a significant amount of time, we should dispose
+      if (waitTime > TimeSpan.FromMinutes(1))
+      {
+        Log.Information("Disposing of MTGO client to free resources...");
+        Client.IsConnectedChanged.Clear();
+        Client?.Dispose();
+        this.Client = null!;
+
+        // Signal the runner to wait for the specified time before restarting.
+        Console.WriteLine($"[Runner:Wait:{waitTime.TotalMilliseconds:F0}]");
+        break;
+      }
+      else
+      {
+        // Clear any small object caches to prevent memory leaks on the client.
+        Client.ClearCaches();
+
+        gcCtx.Dispose();
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+      }
+
+      // Wait for the next event or reset time.
+      if (waitTime > TimeSpan.Zero)
+      {
+        Log.Information("Waiting {WaitTime} minutes before retrying...", waitTime.TotalMinutes);
+        await Task.Delay(waitTime);
+      }
+
+      // If we disposed of the client, we need to restart the bot.
+      if (this.Client == null)
+      {
+        Log.Information("Restarting bot to process next batch of events...");
+        break;
+      }
+
     }
 
     // If we exited because reset time was reached, exit cleanly for restart
     if (DateTime.UtcNow >= ResetTime)
     {
-      Console.WriteLine("Reset time reached. Restarting bot...");
+      Log.Information("Reset time reached. Restarting bot...");
     }
   }
 
-  public void Dispose() => Client.Dispose();
+  public void Dispose() => Client?.Dispose();
 }

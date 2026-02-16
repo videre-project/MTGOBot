@@ -12,6 +12,7 @@ using Dapper;
 using Npgsql;
 
 using MTGOSDK.Core.Security;
+using MTGOSDK.Core.Logging;
 
 using Database.Schemas;
 using Database.Types;
@@ -42,13 +43,71 @@ public class EventRepository
     dbDataSource.MapEnum<EventType>();
     dbDataSource.MapEnum<ResultType>();
 
-    dbDataSource.MapComposite<CardQuantityPair>();
-    dbDataSource.MapComposite<GameResult>();
+    dbDataSource.MapComposite<CardQuantityPair>("cardquantitypair");
+    dbDataSource.MapComposite<GameResult>("gameresult");
 
     var dataSource = dbDataSource.Build()
       ?? throw new Exception("Failed to build data source.");
 
+    SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
+    SqlMapper.AddTypeHandler(new CardQuantityPairArrayHandler());
+    SqlMapper.AddTypeHandler(new GameResultArrayHandler());
+
     return dataSource;
+  }
+
+  /// <summary>
+  /// Handler to convert between Postgres cardquantitypair[] and C# CardQuantityPair[].
+  /// </summary>
+  private class CardQuantityPairArrayHandler : SqlMapper.TypeHandler<CardQuantityPair[]>
+  {
+    public override void SetValue(System.Data.IDbDataParameter parameter, CardQuantityPair[] value)
+    {
+      parameter.Value = value;
+    }
+
+    public override CardQuantityPair[] Parse(object value)
+    {
+      return (CardQuantityPair[])value;
+    }
+  }
+
+  /// <summary>
+  /// Handler to convert between Postgres gameresult[] and C# GameResult[].
+  /// </summary>
+  private class GameResultArrayHandler : SqlMapper.TypeHandler<GameResult[]>
+  {
+    public override void SetValue(System.Data.IDbDataParameter parameter, GameResult[] value)
+    {
+      parameter.Value = value;
+    }
+
+    public override GameResult[] Parse(object value)
+    {
+      return (GameResult[])value;
+    }
+  }
+
+  /// <summary>
+  /// Handler to convert between Postgres DateOnly and C# DateTime.
+  /// </summary>
+  private class DateOnlyTypeHandler : SqlMapper.TypeHandler<DateTime>
+  {
+    public override void SetValue(System.Data.IDbDataParameter parameter, DateTime value)
+    {
+      parameter.Value = DateOnly.FromDateTime(value);
+    }
+
+    public override DateTime Parse(object value)
+    {
+      if (value is DateOnly dateOnly)
+        return dateOnly.ToDateTime(TimeOnly.MinValue);
+      
+      if (value is DateTime dateTime)
+        return dateTime;
+
+      return Convert.ToDateTime(value);
+    }
   }
 
   /// <summary>
@@ -96,7 +155,7 @@ public class EventRepository
   /// </remarks>
   public static async Task AddEvent(EventComposite entry)
   {
-    Console.WriteLine($"Adding event {entry.DisplayName}:\n{entry}");
+    Log.Information("Adding event {DisplayName}:\n{Entry}", entry.DisplayName, entry);
     using (var transactionScope = new TransactionScope(
       TransactionScopeOption.Required,
       TimeSpan.FromMinutes(10),
@@ -213,6 +272,61 @@ public class EventRepository
           VALUES {deck}
         ");
       }
+    }
+  }
+
+  /// <summary>
+  /// Adds a collection of ArchetypeEntry instances to the database.
+  /// </summary>
+  public static async Task AddArchetypeEntries(IEnumerable<ArchetypeEntry> archetypes)
+  {
+    using (var connection = GetConnection())
+    {
+      foreach(var arch in archetypes)
+      {
+        await connection.ExecuteAsync($@"
+          INSERT INTO Archetypes (id, deck_id, name, archetype, archetype_id)
+          VALUES ({arch.Id}, {arch.DeckId}, @Name, @Archetype, {arch.ArchetypeId?.ToString() ?? "NULL"})
+          ON CONFLICT (id) DO UPDATE SET
+            deck_id = EXCLUDED.deck_id,
+            name = EXCLUDED.name,
+            archetype = EXCLUDED.archetype,
+            archetype_id = EXCLUDED.archetype_id
+        ", arch);
+      }
+    }
+  }
+
+  /// <summary>
+  /// Retrieves a list of events that have decks without associated archetypes.
+  /// </summary>
+  /// <param name="days">The number of days to look back for unlabeled events.</param>
+  public static async Task<IEnumerable<EventEntry>> GetUnlabeledEventsAsync(int days = 7)
+  {
+    using (var connection = GetConnection())
+    {
+      return await connection.QueryAsync<EventEntry>(@"
+        SELECT DISTINCT e.*
+        FROM Events e
+        JOIN Decks d ON e.id = d.event_id
+        LEFT JOIN Archetypes a ON d.id = a.deck_id
+        WHERE a.deck_id IS NULL
+        AND e.date >= CURRENT_DATE - (@days * INTERVAL '1 day')
+      ", new { days });
+    }
+  }
+
+  /// <summary>
+  /// Retrieves the deck entries associated with the given event ID.
+  /// </summary>
+  public static async Task<IEnumerable<DeckEntry>> GetDecksByEventAsync(int eventId)
+  {
+    using (var connection = GetConnection())
+    {
+      return await connection.QueryAsync<DeckEntry>(@"
+        SELECT * FROM Decks
+        WHERE event_id = @eventId
+      ", new { eventId });
     }
   }
 }
