@@ -310,8 +310,8 @@ public class EventRepository
         await connection.ExecuteAsync($@"
           INSERT INTO Archetypes (id, deck_id, name, archetype, archetype_id)
           VALUES ({arch.Id}, {arch.DeckId}, @Name, @Archetype, {arch.ArchetypeId?.ToString() ?? "NULL"})
-          ON CONFLICT (id) DO UPDATE SET
-            deck_id = EXCLUDED.deck_id,
+          ON CONFLICT (deck_id) DO UPDATE SET
+            id = EXCLUDED.id,
             name = EXCLUDED.name,
             archetype = EXCLUDED.archetype,
             archetype_id = EXCLUDED.archetype_id
@@ -321,20 +321,23 @@ public class EventRepository
   }
 
   /// <summary>
-  /// Retrieves a list of events that have decks without associated archetypes.
+  /// Retrieves a list of events that still need archetype backfill.
   /// </summary>
-  /// <param name="days">The number of days to look back for unlabeled events.</param>
+  /// <param name="days">The number of days to look back for unresolved events.</param>
   public static async Task<IEnumerable<EventEntry>> GetUnlabeledEventsAsync(int days = 7)
   {
     using (var connection = GetConnection())
     {
       return await connection.QueryAsync<EventEntry>(@"
-        SELECT DISTINCT e.*
+        SELECT e.*
         FROM Events e
         JOIN Decks d ON e.id = d.event_id
         LEFT JOIN Archetypes a ON d.id = a.deck_id
-        WHERE a.deck_id IS NULL
-        AND e.date >= CURRENT_DATE - (@days * INTERVAL '1 day')
+        WHERE e.date >= CURRENT_DATE - (@days * INTERVAL '1 day')
+        GROUP BY e.id, e.name, e.date, e.format, e.kind, e.rounds, e.players
+        HAVING
+          BOOL_OR(a.deck_id IS NULL)
+          OR BOOL_AND(a.archetype_id IS NULL)
       ", new { days });
     }
   }
