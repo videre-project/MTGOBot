@@ -162,6 +162,25 @@ public class BotClient : DLRWrapper<Client>, IDisposable
     };
   }
 
+  private async Task StopClientForIdle()
+  {
+    Client?.IsConnectedChanged.Clear();
+
+    Log.Information("Stopping MTGO process while bot is idle...");
+    bool stopped = await WaitUntil(
+      () => !RemoteClient.KillProcess(),
+      delay: 250,
+      retries: 20
+    );
+    if (!stopped)
+    {
+      Log.Warning("MTGO process is still running after idle shutdown request.");
+    }
+
+    Client?.Dispose();
+    this.Client = null!;
+  }
+
   /// <summary>
   /// Blocks the current thread processing the event queue.
   /// </summary>
@@ -259,9 +278,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
       if (waitTime > TimeSpan.FromMinutes(1))
       {
         Log.Information("Disposing of MTGO client to free resources...");
-        Client.IsConnectedChanged.Clear();
-        Client?.Dispose();
-        this.Client = null!;
+        await StopClientForIdle();
 
         // Signal the runner to wait for the specified time before restarting.
         Console.WriteLine($"[Runner:Wait:{waitTime.TotalMilliseconds:F0}]");
