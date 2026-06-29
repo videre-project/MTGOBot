@@ -25,7 +25,7 @@
     <PackageReference Include="Npgsql"
                       Version="10.0.1" />
     <PackageReference Include="MTGOSDK"
-                      Version="1.5.1.20260622" />
+                      Version="1.5.2.20260629" />
     <PackageReference Include="AngleSharp"
                       Version="1.4.0" />
     <PackageReference Include="Microsoft.Extensions.Logging"
