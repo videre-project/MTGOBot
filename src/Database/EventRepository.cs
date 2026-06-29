@@ -118,6 +118,29 @@ public class EventRepository
   /// </remarks>
   private static NpgsqlConnection GetConnection() => dataSource.OpenConnection();
 
+  /// <summary>
+  /// Waits until a database connection can be established, retrying on socket
+  /// errors (e.g. pgpool not yet ready after system restart).
+  /// </summary>
+  public static async Task WaitForConnectionAsync()
+  {
+    var deadline = DateTime.UtcNow + TimeSpan.FromMinutes(10);
+    while (DateTime.UtcNow < deadline)
+    {
+      try
+      {
+        using var conn = dataSource.OpenConnection();
+        return;
+      }
+      catch (NpgsqlException ex) when (ex.InnerException is System.Net.Sockets.SocketException)
+      {
+        Log.Information("Database not reachable, retrying in 30s...");
+        await Task.Delay(TimeSpan.FromSeconds(30));
+      }
+    }
+    throw new NpgsqlException("Database unavailable after 10 minutes.");
+  }
+
   //
   // Database CRUD Operations
   //
