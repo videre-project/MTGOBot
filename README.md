@@ -53,7 +53,7 @@ wine-run MTGOBot/MTGOBot.csproj
 ```
 
 > [!NOTE]
-> `wine-run` is provided by the [mtgo-oci](https://github.com/videre-project/mtgo-oci) container image and handles Wine prefix setup, Xvfb initialization, and .NET execution under Wine.
+> `wine-run` is provided by the [mtgo-docker](https://github.com/videre-project/mtgo-docker) container image and handles Wine prefix setup, Xvfb initialization, and .NET execution under Wine.
 
 ### Docker (Recommended for Production)
 
@@ -82,9 +82,6 @@ docker logs -f mtgobot
 ```sh
 docker exec -it mtgobot bash
 ```
-
-> [!TIP]
-> The `docker-compose.yml` is pre-configured with environment variables to suppress Wine debug noise (`WINEDEBUG=-all`) and ALSA audio errors (`ALSA_LOG_LEVEL=0`), keeping your logs clean.
 
 ## Project Structure
 

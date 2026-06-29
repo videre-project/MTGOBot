@@ -49,20 +49,17 @@
       },
       "MTGOSDK": {
         "type": "Direct",
-        "requested": "[1.1.1.20260215-preview.17, )",
-        "resolved": "1.1.1.20260215-preview.17",
-        "contentHash": "jgH7FwY6ZR8B/WLuGFHXgwkFwP0C1mGeZSnjPpo9WR6eQNJy9PZwgRvp1bgobsagUWZVvt/D514R/aetdIrs3Q==",
+        "requested": "[1.5.1.20260622, )",
+        "resolved": "1.5.1.20260622",
+        "contentHash": "5ysUjMFq2lnI4D0Zb2NOaSo+c/O6rnKDU0+aU8WcSQaL2YerYAOk4vajt66al2XfUr2XliSYNzeS13SkIx6MfQ==",
         "dependencies": {
           "ImpromptuInterface": "8.0.6",
-          "MTGOSDK.Win32": "1.1.1.20260215-preview.17",
-          "MessagePack": "3.1.4",
-          "MessagePack.Annotations": "3.1.4",
+          "MTGOSDK.Win32": "1.5.1.20260622",
+          "MessagePack": "3.1.7",
+          "MessagePack.Annotations": "3.1.7",
           "Microsoft.Bcl.AsyncInterfaces": "10.0.1",
           "Microsoft.Diagnostics.Runtime": "4.0.0-beta.24360.3",
-          "Microsoft.Extensions.Logging": "10.0.0-rc.1.25451.107",
-          "System.Diagnostics.DiagnosticSource": "10.0.1",
-          "System.IO.Pipelines": "10.0.1",
-          "System.Threading.Channels": "10.0.1"
+          "Microsoft.Extensions.Logging": "10.0.0-rc.1.25451.107"
         }
       },
       "Newtonsoft.Json": {
@@ -121,23 +118,23 @@
       },
       "MessagePack": {
         "type": "Transitive",
-        "resolved": "3.1.4",
-        "contentHash": "BH0wlHWmVoZpbAPyyt2Awbq30C+ZsS3eHSkYdnyUAbqVJ22fAJDzn2xTieBeoT5QlcBzp61vHcv878YJGfi3mg==",
+        "resolved": "3.1.7",
+        "contentHash": "gXpifaxbhfBqh8bVToQn9j+OgCnhXWMbRCV7RQIbCVa9CNJG1fY6oHAYYl+ER3Tb9uUIHiQ5QbGiGwwFhoagbA==",
         "dependencies": {
-          "MessagePack.Annotations": "3.1.4",
-          "MessagePackAnalyzer": "3.1.4",
+          "MessagePack.Annotations": "3.1.7",
+          "MessagePackAnalyzer": "3.1.7",
           "Microsoft.NET.StringTools": "17.11.4"
         }
       },
       "MessagePack.Annotations": {
         "type": "Transitive",
-        "resolved": "3.1.4",
-        "contentHash": "aVWrDAkCdqxwQsz/q0ldPh2EFn48M99YUzE9OvZjMq2RNLKz4o2z88iGFvSvbMqOWRweRvKPHBJZe22PRqzslQ=="
+        "resolved": "3.1.7",
+        "contentHash": "IW1yX9viarFl/Dsio5G+pM90JkOSW4xhAiJcKxPPF5rzyp2/yCpieWju8G99QLEmaQeze2uQMEskUBA59YZmkw=="
       },
       "MessagePackAnalyzer": {
         "type": "Transitive",
-        "resolved": "3.1.4",
-        "contentHash": "CTaSsN/liJ7MhLCAB7Z4ZLBNuVGCq9lt2BT/cbrc9vzGv89yK3CqIA+z9T19a11eQYl9etZHL6MQJgCqECRVpg=="
+        "resolved": "3.1.7",
+        "contentHash": "ZF+OOJTRS7Ogzb4gG36hPKVQk3kEbp6kkUcdRjhddDq/uSGcV4BKIdYiyJipExXyE/zsqYb0ic215O9kI+fjPA=="
       },
       "Microsoft.Bcl.AsyncInterfaces": {
         "type": "Transitive",
@@ -278,8 +275,8 @@
       },
       "MTGOSDK.Win32": {
         "type": "Transitive",
-        "resolved": "1.1.1.20260215-preview.17",
-        "contentHash": "9aIZWoATHObrVfpjoNqKb4Fai9Py65cuHVbjRXdIU7LWVoNCbpgf2y9L07f0/Bh7XnD5PzrqlPcyfLJcU/0Emw==",
+        "resolved": "1.5.1.20260622",
+        "contentHash": "4pfTiSG+zmzgB3HJs+AnRi24g3BbAjRk/n4d+M/XxFB/xpSzfgE8XAUYYKwF0URPZTePjMKqcZnm12TSYtViEA==",
         "dependencies": {
           "Iced": "1.21.0"
         }
@@ -292,16 +289,6 @@
           "System.Memory.Data": "1.0.2"
         }
       },
-      "System.Diagnostics.DiagnosticSource": {
-        "type": "Transitive",
-        "resolved": "10.0.1",
-        "contentHash": "wVYO4/71Pk177uQ3TG8ZQFS3Pnmr98cF9pYxnpuIb/bMnbEWsdZZoLU/euv29mfSi2/Iuypj0TRUchPk7aqBGg=="
-      },
-      "System.IO.Pipelines": {
-        "type": "Transitive",
-        "resolved": "10.0.1",
-        "contentHash": "26LbFXHKd7PmRnWlkjnYgmjd5B6HYVG+1MpTO25BdxTJnx6D0O16JPAC/S4YBqjtt4YpfGj1QO/Ss6SPMGEGQw=="
-      },
       "System.Memory.Data": {
         "type": "Transitive",
         "resolved": "1.0.2",
@@ -311,11 +298,6 @@
         "type": "Transitive",
         "resolved": "4.7.0",
         "contentHash": "ehYW0m9ptxpGWvE4zgqongBVWpSDU/JCFD4K7krxkQwSz/sFQjEXCUqpvencjy6DYDbn7Ig09R8GFffu8TtneQ=="
-      },
-      "System.Threading.Channels": {
-        "type": "Transitive",
-        "resolved": "10.0.1",
-        "contentHash": "YRqU6Y2Cl6C+HrG5h1ftgKZ5VDTSA7j1wMKs5RtlauPeQ2EZ639Jt5aOFHdX3naP01hDDWFOWPApmNDVKwOpmg=="
       }
     }
   }
