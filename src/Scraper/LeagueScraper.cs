@@ -57,6 +57,14 @@ public class LeagueScraper
           if (!TryParseOfficialLeague(candidate.Name, out var parsedFormat, out var date) || parsedFormat != format)
             continue;
 
+          var existing = await EventRepository.GetLeagueImportStatus(format, date);
+          if (existing != null && existing.DeckCount > 0)
+          {
+            Log.Debug("League {Name} is already imported as event {EventId} with {DeckCount} decklists.",
+              candidate.Name, existing.EventId, existing.DeckCount);
+            continue;
+          }
+
           discovered++;
           try
           {
@@ -129,6 +137,17 @@ public class LeagueScraper
     {
       Log.Warning("MTGO.com League page for {Name} did not expose embedded decklists at {Url}.",
         name, goldfishData.MtgoUrl ?? "(missing MTGO URL)");
+      return false;
+    }
+
+    if (mtgoDecks.Count < goldfishData.RowsByPlayer.Count)
+    {
+      Log.Warning(
+        "MTGO.com League page for {Name} exposed fewer decklists than MTGGoldfish ({MtgoCount} vs {GoldfishCount}) at {Url}; leaving it unimported for retry.",
+        name,
+        mtgoDecks.Count,
+        goldfishData.RowsByPlayer.Count,
+        goldfishData.MtgoUrl ?? "(missing MTGO URL)");
       return false;
     }
 

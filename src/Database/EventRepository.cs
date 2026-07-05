@@ -164,6 +164,39 @@ public class EventRepository
     }
   }
 
+  public sealed class LeagueImportStatus
+  {
+    public int EventId { get; set; }
+    public int DeckCount { get; set; }
+  }
+
+  public static async Task<LeagueImportStatus?> GetLeagueImportStatus(
+    FormatType format,
+    DateTime date)
+  {
+    using (var connection = GetConnection())
+    {
+      return await connection.QuerySingleOrDefaultAsync<LeagueImportStatus>(@"
+        SELECT
+          e.id AS EventId,
+          COUNT(DISTINCT d.id)::int AS DeckCount
+        FROM Events e
+        LEFT JOIN Decks d ON d.event_id = e.id
+        WHERE e.kind = @Kind
+          AND e.format = @Format
+          AND e.date = @Date
+        GROUP BY e.id
+        ORDER BY DeckCount DESC
+        LIMIT 1
+      ", new
+      {
+        Kind = EventType.League,
+        Format = format,
+        Date = date.Date
+      });
+    }
+  }
+
   /// <summary>
   /// Adds entries from an EventComposite view to the database.
   /// </summary>
