@@ -21,6 +21,18 @@ namespace Scraper;
 
 public class GoldfishScraper
 {
+  public record LeagueDeckRow(
+    int GoldfishDeckId,
+    string Label,
+    string Player,
+    string Record,
+    string Archetype,
+    int? ArchetypeId);
+
+  public record LeagueData(
+    string? MtgoUrl,
+    Dictionary<string, LeagueDeckRow> RowsByPlayer);
+
   private static readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler
   {
     AllowAutoRedirect = true
@@ -317,7 +329,7 @@ public class GoldfishScraper
       await Task.Delay(TimeSpan.FromSeconds(2));
     }
 
-    // For unmatched decks, fetch individual deck pages
+    // For unmatched decks, fetch individual deck pages.
     Log.Information("Fetching individual deck pages for {UnmatchedCount} unmatched players", playerArchetypes.Count(p => p.Value.ArchetypeId == null));
     foreach (var player in playerArchetypes.Keys.ToList())
     {
@@ -345,11 +357,89 @@ public class GoldfishScraper
         }
       }
 
-      // Rate limiting: wait between individual deck fetches
+      // Rate limiting: wait between individual deck fetches.
       await Task.Delay(TimeSpan.FromSeconds(2));
     }
 
     return playerArchetypes;
+  }
+
+  public static async Task<LeagueData> GetLeagueDataAsync(int tournamentId)
+  {
+    string goldfishTournamentUrl = $"https://www.mtggoldfish.com/tournament/{tournamentId}";
+    var doc = await GetDocumentAsync(goldfishTournamentUrl);
+    var mtgoUrl = doc.QuerySelectorAll("a")
+      .Select(a => a.GetAttribute("href"))
+      .FirstOrDefault(href => href?.Contains("mtgo.com/decklist/", StringComparison.OrdinalIgnoreCase) == true);
+
+    var archetypes = new Dictionary<string, int>();
+    var breakdown = doc.QuerySelectorAll("table")
+      .FirstOrDefault(t =>
+      {
+        var headers = t.QuerySelectorAll("th")
+          .Select(h => h.TextContent.Trim())
+          .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return headers.Contains("Deck")
+          && headers.Contains("Percentage")
+          && headers.Contains("Total");
+      });
+
+    if (breakdown != null)
+    {
+      foreach (var node in breakdown.QuerySelectorAll("tr > td:first-child > a[href*='/archetype/']"))
+      {
+        var href = node.GetAttribute("href");
+        var match = Regex.Match(href ?? "", @"/archetype/(\d+)");
+        if (match.Success)
+          archetypes[node.TextContent.Trim()] = int.Parse(match.Groups[1].Value);
+      }
+    }
+
+    var table = doc.QuerySelectorAll("table.table-tournament")
+      .FirstOrDefault(t => t.QuerySelector("th")?.TextContent.Contains("Place", StringComparison.OrdinalIgnoreCase) == true);
+    var rowsByPlayer = new Dictionary<string, LeagueDeckRow>(StringComparer.OrdinalIgnoreCase);
+
+    if (table == null) return new LeagueData(mtgoUrl, rowsByPlayer);
+
+    foreach (var row in table.QuerySelectorAll("tr").Where(r => r.GetAttribute("style") != "display: none;"))
+    {
+      var cells = row.QuerySelectorAll("td").ToList();
+      if (cells.Count < 3) continue;
+
+      var deckLink = cells[1].QuerySelector("a[href*='/deck/']");
+      var playerLink = cells[2].QuerySelector("a[href*='/player/']");
+      if (deckLink == null || playerLink == null) continue;
+
+      var deckHref = deckLink.GetAttribute("href") ?? "";
+      var idMatch = Regex.Match(deckHref, @"/deck/(?<id>\d+)");
+      if (!idMatch.Success) continue;
+
+      int deckId = int.Parse(idMatch.Groups["id"].Value);
+      string label = deckLink.TextContent.Trim();
+      string player = playerLink.TextContent.Trim();
+      string record = NormalizeRecord(cells[0].TextContent);
+      string? fallback = label.Split(' ').Length > 1 ? string.Join(" ", label.Split(' ').Skip(1)) : null;
+      int? archetypeId = archetypes.ContainsKey(label)
+        ? archetypes[label]
+        : (fallback != null && archetypes.ContainsKey(fallback) ? archetypes[fallback] : (int?)null);
+      string archetype = archetypeId.HasValue
+        ? (archetypes.ContainsKey(label) ? label : fallback!)
+        : label;
+
+      rowsByPlayer[player] = new LeagueDeckRow(deckId, label, player, record, archetype, archetypeId);
+    }
+
+    return new LeagueData(mtgoUrl, rowsByPlayer);
+
+    static string NormalizeRecord(string? value)
+    {
+      var normalized = Regex.Replace(value ?? "", @"\s+", "");
+      var match = Regex.Match(normalized, @"^(?<wins>\d+)-(?<losses>\d+)(?:-(?<draws>\d+))?$");
+      return match.Success
+        ? $"{match.Groups["wins"].Value}-{match.Groups["losses"].Value}-{(match.Groups["draws"].Success ? match.Groups["draws"].Value : "0")}"
+        : "5-0-0";
+    }
   }
 
   /// <summary>

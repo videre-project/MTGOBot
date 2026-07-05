@@ -7,6 +7,7 @@ using System.Linq;
 
 using MTGOSDK.API.Play.Tournaments;
 using MTGOSDK.API.Users;
+using static Database.Sql;
 
 
 namespace Database.Types;
@@ -31,7 +32,7 @@ public struct GameResult
 
   public override string ToString() =>
     string.Format(
-      "({0}, '{1}')",
-      Id, Result
+      "({0}, {1})",
+      Id, Literal(Result)
     );
 }

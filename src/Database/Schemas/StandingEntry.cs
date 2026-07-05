@@ -12,6 +12,7 @@ using static MTGOSDK.Core.Reflection.DLRWrapper;
 
 using Database.Types;
 using Utils;
+using static Database.Sql;
 
 
 namespace Database.Schemas;
@@ -19,13 +20,13 @@ namespace Database.Schemas;
 public struct StandingEntry
 {
   public int    EventId { get; set; }
-  public int    Rank    { get; set; }
+  public int?   Rank    { get; set; }
   public string Player  { get; set; }
   public string Record  { get; set; }
-  public int    Points  { get; set; }
-  public float  OMWP    { get; set; }
-  public float  GWP     { get; set; }
-  public float  OGWP    { get; set; }
+  public int?   Points  { get; set; }
+  public float? OMWP    { get; set; }
+  public float? GWP     { get; set; }
+  public float? OGWP    { get; set; }
 
   public ICollection<MatchEntry> Matches { get; private set; }
 
@@ -41,6 +42,19 @@ public struct StandingEntry
 
     this.Matches = GetMatches(eventId, standing);
     this.Record  = GetRecord(this.Matches);
+  }
+
+  public StandingEntry(int eventId, string player, string record)
+  {
+    this.EventId = eventId;
+    this.Rank = null;
+    this.Player = player;
+    this.Record = record;
+    this.Points = null;
+    this.OMWP = null;
+    this.GWP = null;
+    this.OGWP = null;
+    this.Matches = new List<MatchEntry>();
   }
 
   /// <summary>
@@ -154,7 +168,7 @@ public struct StandingEntry
       int draws = standing.Matches.Count(m => m.Result == ResultType.draw);
       int expectedPoints = (wins * 3) + draws;
 
-      if (standing.Points != expectedPoints)
+      if (standing.Points.HasValue && standing.Points.Value != expectedPoints)
         throw new InvalidOperationException(
           $"Points mismatch for {standing.Player}: expected {expectedPoints}, got {standing.Points}.");
     }
@@ -220,7 +234,7 @@ public struct StandingEntry
 
   public override string ToString() =>
     string.Format(
-      "({0}, {1}, '{2}', '{3}', {4}, {5}, {6}, {7})",
-      EventId, Rank, Player, Record, Points, OMWP, GWP, OGWP
+      "({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7})",
+      EventId, Literal(Rank), Literal(Player), Literal(Record), Literal(Points), Literal(OMWP), Literal(GWP), Literal(OGWP)
     );
 }

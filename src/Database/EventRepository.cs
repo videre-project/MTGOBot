@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 
@@ -179,17 +180,47 @@ public class EventRepository
   public static async Task AddEvent(EventComposite entry)
   {
     Log.Information("Adding event {DisplayName}:\n{Entry}", entry.DisplayName, entry);
+    await AddEventPayload(
+      entry.@event,
+      entry.players,
+      entry.standings,
+      entry.matches,
+      entry.decklists,
+      []
+    );
+  }
+
+  public static async Task AddEventPayload(
+    EventEntry @event,
+    IEnumerable<PlayerEntry> players,
+    IEnumerable<StandingEntry> standings,
+    IEnumerable<MatchEntry> matches,
+    IEnumerable<DeckEntry> decklists,
+    IEnumerable<ArchetypeEntry> archetypes)
+  {
+    Log.Information(
+      "Adding event {Name} #{Id}: Players={Players}, Standings={Standings}, Matches={Matches}, Decklists={Decklists}, Archetypes={Archetypes}",
+      @event.Name,
+      @event.Id,
+      players.Count(),
+      standings.Count(),
+      matches.Count(),
+      decklists.Count(),
+      archetypes.Count()
+    );
+
     using (var transactionScope = new TransactionScope(
       TransactionScopeOption.Required,
       TimeSpan.FromMinutes(10),
       TransactionScopeAsyncFlowOption.Enabled
     ))
     {
-      await AddEventEntry(entry.@event);
-      await AddPlayerEntries(entry.players);
-      await AddStandingEntries(entry.standings);
-      await AddMatchEntries(entry.matches);
-      await AddDeckEntries(entry.decklists);
+      await AddEventEntry(@event);
+      await AddPlayerEntries(players);
+      await AddStandingEntries(standings);
+      await AddMatchEntries(matches);
+      await AddDeckEntries(decklists);
+      await AddArchetypeEntries(archetypes);
 
       transactionScope.Complete();
     }
@@ -218,11 +249,15 @@ public class EventRepository
     {
       foreach(var player in players)
       {
-        // Try to insert with the official ID first.
+        // Try to insert with the official ID first. Either unique key can
+        // already be present: id can be reused after a rename, while name can
+        // appear with a different scraped id. The name is the FK target used by
+        // event payload tables, so an existing name already satisfies the import
+        // without adding a duplicate player row.
         int rows = await connection.ExecuteAsync($@"
           INSERT INTO Players (id, name)
           VALUES (@Id, @Name)
-          ON CONFLICT (id) DO NOTHING
+          ON CONFLICT DO NOTHING
         ", player);
 
         // If no rows were affected, the ID is already in the database.
@@ -239,9 +274,18 @@ public class EventRepository
             await connection.ExecuteAsync($@"
               INSERT INTO Players (id, name)
               VALUES (@Id, @Name)
-              ON CONFLICT (id) DO NOTHING
+              ON CONFLICT DO NOTHING
             ", new { Id = PlayerEntry.GenerateStableId(player.Name), Name = player.Name });
           }
+        }
+
+        bool playerNameExists = await connection.ExecuteScalarAsync<bool>($@"
+          SELECT EXISTS(SELECT 1 FROM Players WHERE name = @Name)
+        ", player);
+
+        if (!playerNameExists)
+        {
+          throw new Exception($"Failed to insert or find player name '{player.Name}'.");
         }
       }
     }
@@ -308,13 +352,21 @@ public class EventRepository
       foreach(var arch in archetypes)
       {
         await connection.ExecuteAsync($@"
-          INSERT INTO Archetypes (id, deck_id, name, archetype, archetype_id)
-          VALUES ({arch.Id}, {arch.DeckId}, @Name, @Archetype, {arch.ArchetypeId?.ToString() ?? "NULL"})
+          INSERT INTO Archetypes (id, deck_id, name, archetype, archetype_id, provider)
+          VALUES (
+            {arch.Id},
+            {arch.DeckId},
+            @Name,
+            @Archetype,
+            {Sql.Literal(arch.ArchetypeId)},
+            @Provider
+          )
           ON CONFLICT (deck_id) DO UPDATE SET
             id = EXCLUDED.id,
             name = EXCLUDED.name,
             archetype = EXCLUDED.archetype,
-            archetype_id = EXCLUDED.archetype_id
+            archetype_id = EXCLUDED.archetype_id,
+            provider = EXCLUDED.provider
         ", arch);
       }
     }

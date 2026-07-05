@@ -8,6 +8,7 @@ using System;
 using MTGOSDK.API.Play.Tournaments;
 
 using Database.Types;
+using static Database.Sql;
 
 
 namespace Database.Schemas;
@@ -37,6 +38,30 @@ public struct EventEntry
     {
       throw new ArgumentException(
         $"Tournament {tournament.Id} has invalid data: Id={this.Id}, Players={this.Players}, Name={this.Name}");
+    }
+  }
+
+  public EventEntry(
+    int id,
+    string name,
+    DateTime date,
+    FormatType format,
+    EventType kind,
+    int rounds,
+    int players)
+  {
+    this.Id = id;
+    this.Name = name;
+    this.Date = date;
+    this.Format = format;
+    this.Kind = kind;
+    this.Rounds = rounds;
+    this.Players = players;
+
+    if (this.Id == 0 || this.Rounds < 3 || this.Players < 4)
+    {
+      throw new ArgumentException(
+        $"Event has invalid data: Id={this.Id}, Players={this.Players}, Rounds={this.Rounds}, Name={this.Name}");
     }
   }
 
@@ -80,7 +105,7 @@ public struct EventEntry
 
   public override string ToString() =>
     string.Format(
-      "({0}, {1}, '{2}', '{3}', '{4}', {5}, {6})",
-      Id, Name?.Escape() != null ? $"'{Name.Escape()}'" : "NULL", Date, Format, Kind, Rounds, Players
+      "({0}, {1}, {2}, {3}, {4}, {5}, {6})",
+      Id, Literal(Name), Literal(Date), Literal(Format), Literal(Kind), Rounds, Players
     );
 }

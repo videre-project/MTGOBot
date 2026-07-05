@@ -4,12 +4,8 @@
 **/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Web;
 
 using Newtonsoft.Json.Linq;
 
@@ -71,7 +67,7 @@ public static class MTGODecklistScraper
         }
 
         string html = await response.Content.ReadAsStringAsync();
-        var result = ExtractDecklistsFromHtml(html);
+        var result = ExtractDecklistDataFromHtml(html)?["decklists"] as JArray;
         if (result != null)
         {
           Log.Debug("Successfully extracted decklists from {Url}", url);
@@ -88,30 +84,108 @@ public static class MTGODecklistScraper
     return null;
   }
 
+  public static async Task<JObject?> GetDecklistDataFromUrl(string url)
+  {
+    try
+    {
+      var response = await _httpClient.GetAsync(url);
+      if (!response.IsSuccessStatusCode)
+      {
+        Log.Trace("Failed to fetch MTGO decklist data from {Url} (Status: {StatusCode})", url, response.StatusCode);
+        return null;
+      }
+
+      var finalUrl = response.RequestMessage?.RequestUri?.ToString();
+      if (finalUrl != url && finalUrl != url + "/")
+      {
+        Log.Trace("Redirected from {Url} to {FinalUrl}. Skipping.", url, finalUrl);
+        return null;
+      }
+
+      string html = await response.Content.ReadAsStringAsync();
+      return ExtractDecklistDataFromHtml(html);
+    }
+    catch (Exception e)
+    {
+      Log.Trace("Error fetching {Url}: {Message}", url, e.Message);
+      return null;
+    }
+  }
+
   /// <summary>
   /// Extracts the JSON decklist data from the MTGO source HTML.
   /// </summary>
-  private static JArray? ExtractDecklistsFromHtml(string html)
+  public static JObject? ExtractDecklistDataFromHtml(string html)
   {
-    // The data is stored in `window.MTGO.decklists.data`.
-    // We look for the script tag containing this data.
-    string pattern = @"window\.MTGO\.decklists\.data\s*=\s*(\{.*?\});";
-    var match = Regex.Match(html, pattern, RegexOptions.Singleline);
-    
-    if (match.Success)
+    const string marker = "window.MTGO.decklists.data";
+    int markerIndex = html.IndexOf(marker, StringComparison.Ordinal);
+    if (markerIndex < 0) return null;
+
+    int equalsIndex = html.IndexOf("=", markerIndex, StringComparison.Ordinal);
+    if (equalsIndex < 0) return null;
+
+    int index = equalsIndex + 1;
+    while (index < html.Length && char.IsWhiteSpace(html[index]))
+      index++;
+
+    if (index >= html.Length || html[index] != '{') return null;
+
+    int start = index;
+    int depth = 0;
+    bool inString = false;
+    bool escaped = false;
+
+    for (; index < html.Length; index++)
     {
-      try
+      char current = html[index];
+
+      if (inString)
       {
-        var json = JObject.Parse(match.Groups[1].Value);
-        var decklists = json["decklists"];
-        return decklists as JArray;
+        if (escaped)
+        {
+          escaped = false;
+        }
+        else if (current == '\\')
+        {
+          escaped = true;
+        }
+        else if (current == '"')
+        {
+          inString = false;
+        }
+        continue;
       }
-      catch
+
+      if (current == '"')
       {
-        return null;
+        inString = true;
+        continue;
+      }
+
+      if (current == '{')
+      {
+        depth++;
+      }
+      else if (current == '}')
+      {
+        depth--;
+        if (depth == 0)
+        {
+          index++;
+          break;
+        }
       }
     }
 
-    return null;
+    if (depth != 0) return null;
+
+    try
+    {
+      return JObject.Parse(html[start..index]);
+    }
+    catch
+    {
+      return null;
+    }
   }
 }

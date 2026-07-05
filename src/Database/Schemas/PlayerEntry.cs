@@ -9,6 +9,7 @@ using System.Linq;
 
 using MTGOSDK.API.Play.Tournaments;
 using MTGOSDK.API.Users;
+using static Database.Sql;
 
 
 namespace Database.Schemas;
@@ -24,6 +25,12 @@ public struct PlayerEntry
     this.Name = player.Name;
   }
 
+  public PlayerEntry(string name)
+  {
+    this.Id = GenerateStableId(name);
+    this.Name = name;
+  }
+
   /// <summary>
   /// Generates a deterministic negative ID based on the player's name.
   /// </summary>
@@ -32,7 +39,7 @@ public struct PlayerEntry
     int hash = 0;
     foreach (char c in name)
     {
-        hash = (hash * 31) + c;
+      hash = (hash * 31) + c;
     }
     return -Math.Abs(hash);
   }
@@ -72,7 +79,7 @@ public struct PlayerEntry
 
   public override string ToString() =>
     string.Format(
-      "({0}, '{1}')",
-      this.Id, this.Name
+      "({0}, {1})",
+      this.Id, Literal(this.Name)
     );
 }

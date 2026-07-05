@@ -5,17 +5,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json.Linq;
 
 using MTGOSDK.API.Play.Tournaments;
-using MTGOSDK.API.Users;
 
 using Database.Types;
 using Scraper;
+using static Database.Sql;
 
 
 namespace Database.Schemas;
@@ -28,37 +26,63 @@ public struct DeckEntry
   public CardQuantityPair[] MainBoard { get; set; }
   public CardQuantityPair[] SideBoard { get; set; }
 
-  public DeckEntry(int eventId, string playerName, JToken json)
+  public DeckEntry(
+    int id,
+    int eventId,
+    string playerName,
+    CardQuantityPair[] mainBoard,
+    CardQuantityPair[] sideBoard)
   {
-    this.Id        = GetDeckId(json);
+    this.Id        = id;
     this.EventId   = eventId;
     this.Player    = playerName;
-    this.MainBoard = GetBoard(json, "main");
-    this.SideBoard = GetBoard(json, "sideboard");
+    this.MainBoard = mainBoard;
+    this.SideBoard = sideBoard;
   }
 
-  [Obsolete("Use the constructor that takes a player name string.")]
-  public DeckEntry(int eventId, User player, JToken json)
-    : this(eventId, player.Name, json)
+  public DeckEntry(int eventId, string playerName, JToken json)
+    : this(
+      GetDeckId(json),
+      eventId,
+      playerName,
+      GetBoard(json, "main"),
+      GetBoard(json, "sideboard"))
   { }
 
-  /// <summary>
-  /// Retrieves the deck ID from the given JSON object.
-  /// </summary>
-  private static int GetDeckId(JToken json) =>
-    json["decktournamentid"].ToObject<int>();
+  private static int GetDeckId(JToken json)
+  {
+    int? deckTournamentId = json["decktournamentid"]?.ToObject<int?>();
+    if (deckTournamentId.HasValue)
+      return deckTournamentId.Value;
 
-  /// <summary>
-  /// Retrieves a list of cards from the given board type.
-  /// </summary>
+    int? leagueDeckId = GetLeagueDeckId(json);
+    if (leagueDeckId.HasValue)
+      return leagueDeckId.Value;
+
+    throw new ArgumentException(
+      "Deck JSON does not contain decktournamentid or leaguedeckid."
+    );
+  }
+
   private static CardQuantityPair[] GetBoard(JToken json, string key)
   {
     var cards = new List<CardQuantityPair>();
-    foreach (var card in json[$"{key}_deck"])
-    {
+    foreach (var card in json[$"{key}_deck"] ?? new JArray())
       cards.Add(new CardQuantityPair(card));
-    }
     return cards.ToArray();
+  }
+
+  private static int? GetLeagueDeckId(JToken deck)
+  {
+    foreach (var board in new[] { "main_deck", "sideboard_deck" })
+    {
+      foreach (var card in deck[board] ?? new JArray())
+      {
+        int? value = card["leaguedeckid"]?.ToObject<int?>();
+        if (value.HasValue) return value.Value;
+      }
+    }
+    return null;
   }
 
   /// <summary>
@@ -104,7 +128,7 @@ public struct DeckEntry
 
   public override string ToString() =>
     string.Format(
-      "({0}, {1}, '{2}', {3}, {4})",
-      Id, EventId, Player, MainBoard.FormatArray(), SideBoard.FormatArray()
+      "({0}, {1}, {2}, {3}, {4})",
+      Id, EventId, Literal(Player), MainBoard.FormatArray(), SideBoard.FormatArray()
     );
 }

@@ -272,6 +272,7 @@ public class BotClient : DLRWrapper<Client>, IDisposable
         // to be updated.
         //
         await Scraper.GoldfishScraper.UpdateArchetypesAsync();
+        await Scraper.LeagueScraper.UpdateAsync();
       }
 
       // If we are waiting for a significant amount of time, we should dispose

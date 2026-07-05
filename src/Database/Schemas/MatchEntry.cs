@@ -11,6 +11,7 @@ using MTGOSDK.API.Users;
 using static MTGOSDK.Core.Reflection.DLRWrapper;
 
 using Database.Types;
+using static Database.Sql;
 
 
 namespace Database.Schemas;
@@ -33,7 +34,7 @@ public struct MatchEntry
     this.EventId  = eventId;
     this.Round    = match.Round;
     this.Player   = player.Name;
-    this.Opponent = GetOpponent(match.Players, player) ?? string.Empty;
+    this.Opponent = GetOpponent(match.Players, player);
     this.Result   = GetResult(match, player);
     this.IsBye    = match.HasBye;
 
@@ -87,8 +88,8 @@ public struct MatchEntry
 
   public override string ToString() =>
     string.Format(
-      "({0}, {1}, {2}, '{3}', '{4}', '{5}', '{6}', {7}, {8})",
-      Id, EventId, Round, Player, Opponent, Record, Result, IsBye,
+      "({0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})",
+      Literal(Id), EventId, Round, Literal(Player), Literal(Opponent), Literal(Record), Literal(Result), Literal(IsBye),
       Games.FormatArray()
-    ).Replace(@", '', ", @", NULL, ");
+    );
 }
