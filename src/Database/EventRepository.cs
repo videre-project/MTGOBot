@@ -480,6 +480,7 @@ public class EventRepository
         JOIN Decks d ON e.id = d.event_id
         LEFT JOIN Archetypes a ON d.id = a.deck_id
         WHERE e.date >= CURRENT_DATE - (@days * INTERVAL '1 day')
+          AND e.kind <> 'League'::EventType
         GROUP BY e.id, e.name, e.date, e.format, e.kind, e.rounds, e.players
         HAVING
           BOOL_OR(a.deck_id IS NULL)

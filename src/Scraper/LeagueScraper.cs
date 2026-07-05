@@ -47,9 +47,11 @@ public class LeagueScraper
     var startDate = DateTime.UtcNow.Date.AddDays(-days);
     int imported = 0;
     int discovered = 0;
+    int skippedExisting = 0;
 
     foreach (var format in Formats)
     {
+      int formatSkippedExisting = 0;
       try
       {
         await foreach (var candidate in GoldfishScraper.GetEventsAsync("League", format.ToString(), startDate, endDate))
@@ -60,8 +62,8 @@ public class LeagueScraper
           var existing = await EventRepository.GetLeagueImportStatus(format, date);
           if (existing != null && existing.DeckCount > 0)
           {
-            Log.Debug("League {Name} is already imported as event {EventId} with {DeckCount} decklists.",
-              candidate.Name, existing.EventId, existing.DeckCount);
+            skippedExisting++;
+            formatSkippedExisting++;
             continue;
           }
 
@@ -85,9 +87,16 @@ public class LeagueScraper
         Log.Error("Failed to search MTGGoldfish {Format} Leagues: {Message}",
           format, ex.Message);
       }
+
+      if (formatSkippedExisting > 0)
+      {
+        Log.Debug("Skipped {Count} already-imported {Format} League publication(s).",
+          formatSkippedExisting, format);
+      }
     }
 
-    Log.Information("League update complete: discovered {Discovered}, imported {Imported}.", discovered, imported);
+    Log.Information("League update complete: discovered {Discovered}, imported {Imported}, skipped existing {SkippedExisting}.",
+      discovered, imported, skippedExisting);
   }
 
   private static bool TryParseOfficialLeague(string name, out FormatType format, out DateTime date)
