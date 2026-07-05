@@ -182,16 +182,16 @@ public class EventRepository
           COUNT(DISTINCT d.id)::int AS DeckCount
         FROM Events e
         LEFT JOIN Decks d ON d.event_id = e.id
-        WHERE e.kind = @Kind
-          AND e.format = @Format
+        WHERE e.kind = CAST(@Kind AS EventType)
+          AND e.format = CAST(@Format AS FormatType)
           AND e.date = @Date
         GROUP BY e.id
         ORDER BY DeckCount DESC
         LIMIT 1
       ", new
       {
-        Kind = EventType.League,
-        Format = format,
+        Kind = EventType.League.ToString(),
+        Format = format.ToString(),
         Date = date.Date
       });
     }
