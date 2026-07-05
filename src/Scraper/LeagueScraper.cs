@@ -50,24 +50,32 @@ public class LeagueScraper
 
     foreach (var format in Formats)
     {
-      await foreach (var candidate in GoldfishScraper.GetEventsAsync("League", format.ToString(), startDate, endDate))
+      try
       {
-        if (!TryParseOfficialLeague(candidate.Name, out var parsedFormat, out var date) || parsedFormat != format)
-          continue;
-
-        discovered++;
-        try
+        await foreach (var candidate in GoldfishScraper.GetEventsAsync("League", format.ToString(), startDate, endDate))
         {
-          if (await ImportAsync(candidate.Id, candidate.Name, format, date))
-            imported++;
-        }
-        catch (Exception ex)
-        {
-          Log.Error("Failed to import League {Name} ({GoldfishId}): {Message}",
-            candidate.Name, candidate.Id, ex.Message);
-        }
+          if (!TryParseOfficialLeague(candidate.Name, out var parsedFormat, out var date) || parsedFormat != format)
+            continue;
 
-        await Task.Delay(TimeSpan.FromSeconds(1));
+          discovered++;
+          try
+          {
+            if (await ImportAsync(candidate.Id, candidate.Name, format, date))
+              imported++;
+          }
+          catch (Exception ex)
+          {
+            Log.Error("Failed to import League {Name} ({GoldfishId}): {Message}",
+              candidate.Name, candidate.Id, ex.Message);
+          }
+
+          await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Failed to search MTGGoldfish {Format} Leagues: {Message}",
+          format, ex.Message);
       }
     }
 

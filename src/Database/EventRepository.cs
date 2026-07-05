@@ -351,25 +351,86 @@ public class EventRepository
     {
       foreach(var arch in archetypes)
       {
-        await connection.ExecuteAsync($@"
+        int updatedRows = await connection.ExecuteAsync(@"
+          UPDATE Archetypes
+          SET
+            name = @Name,
+            archetype = @Archetype,
+            archetype_id = @ArchetypeId,
+            provider = @Provider
+          WHERE deck_id = @DeckId
+        ", arch);
+
+        if (updatedRows > 0)
+          continue;
+
+        int insertId = await GetArchetypeInsertId(connection, arch);
+
+        await connection.ExecuteAsync(@"
           INSERT INTO Archetypes (id, deck_id, name, archetype, archetype_id, provider)
-          VALUES (
-            {arch.Id},
-            {arch.DeckId},
-            @Name,
-            @Archetype,
-            {Sql.Literal(arch.ArchetypeId)},
-            @Provider
-          )
+          VALUES (@Id, @DeckId, @Name, @Archetype, @ArchetypeId, @Provider)
           ON CONFLICT (deck_id) DO UPDATE SET
-            id = EXCLUDED.id,
             name = EXCLUDED.name,
             archetype = EXCLUDED.archetype,
             archetype_id = EXCLUDED.archetype_id,
             provider = EXCLUDED.provider
-        ", arch);
+        ", new
+        {
+          Id = insertId,
+          arch.DeckId,
+          arch.Name,
+          arch.Archetype,
+          arch.ArchetypeId,
+          arch.Provider
+        });
       }
     }
+  }
+
+  private static async Task<int> GetArchetypeInsertId(
+    NpgsqlConnection connection,
+    ArchetypeEntry arch)
+  {
+    bool idTakenByOtherDeck = await connection.ExecuteScalarAsync<bool>(@"
+      SELECT EXISTS (
+        SELECT 1
+        FROM Archetypes
+        WHERE id = @Id
+          AND deck_id <> @DeckId
+      )
+    ", arch);
+
+    if (!idTakenByOtherDeck)
+      return arch.Id;
+
+    for (int attempt = 0; attempt < 100; attempt++)
+    {
+      int candidate = StableNegativeId($"archetype:{arch.DeckId}:{attempt}");
+      bool candidateTaken = await connection.ExecuteScalarAsync<bool>(@"
+        SELECT EXISTS (
+          SELECT 1
+          FROM Archetypes
+          WHERE id = @Id
+        )
+      ", new { Id = candidate });
+
+      if (!candidateTaken)
+        return candidate;
+    }
+
+    throw new Exception($"Could not allocate archetype ID for deck {arch.DeckId}.");
+  }
+
+  private static int StableNegativeId(string value)
+  {
+    uint hash = 2166136261;
+    foreach (char c in value)
+    {
+      hash ^= c;
+      hash *= 16777619;
+    }
+
+    return -1 - (int)(hash % 2147483646);
   }
 
   /// <summary>

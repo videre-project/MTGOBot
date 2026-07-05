@@ -80,6 +80,10 @@ public class GoldfishScraper
         response.EnsureSuccessStatusCode();
         return content;
       }
+      catch (HttpRequestException e) when (e.StatusCode == System.Net.HttpStatusCode.BadRequest)
+      {
+        throw;
+      }
       catch (Exception e) when (e is TaskCanceledException || e is HttpRequestException)
       {
         Log.Warning("Request to {Url} failed or timed out, retrying... (attempt {RetryCount}): {Message}", url, retryCount + 1, e.Message);
@@ -144,13 +148,15 @@ public class GoldfishScraper
       IDocument doc;
       try
       {
-        doc = await GetDocumentAsync($"{url}&page={page++}");
+        doc = await GetDocumentAsync($"{url}&page={page}");
       }
       catch (HttpRequestException e) when (e.StatusCode == System.Net.HttpStatusCode.BadRequest)
       {
         // MTGGoldfish returns 400 if the page number is out of range.
         break;
       }
+
+      page++;
 
       var table = doc.QuerySelector("table.table.table-striped");
       if (table == null) break;
